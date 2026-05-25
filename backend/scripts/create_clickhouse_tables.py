@@ -1,0 +1,2 @@
+"""Create ClickHouse tables."""
+
