@@ -1,2 +1,1 @@
 """Batch job schemas."""
-

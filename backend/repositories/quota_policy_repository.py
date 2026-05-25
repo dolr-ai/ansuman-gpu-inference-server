@@ -1,2 +1,1 @@
 """Quota policy repository."""
-

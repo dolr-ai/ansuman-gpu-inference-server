@@ -1,2 +1,1 @@
 """vLLM error mapping."""
-

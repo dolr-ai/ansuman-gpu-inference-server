@@ -1,2 +1,1 @@
 """Tests for rate limiting."""
-

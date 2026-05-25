@@ -1,2 +1,1 @@
 """Model API schemas."""
-

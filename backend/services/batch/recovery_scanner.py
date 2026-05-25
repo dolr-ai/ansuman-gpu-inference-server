@@ -1,2 +1,1 @@
 """Batch recovery scanner."""
-

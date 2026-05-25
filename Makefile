@@ -3,7 +3,7 @@ ENV_FILE := .env
 UV := uv
 UV_RUN := $(UV) run --env-file $(ENV_FILE)
 
-.PHONY: install venv env dev lint format test-unit test-integration test migrate run-api run-worker run-flusher smoke bench
+.PHONY: install venv env dev format-check lint format test-unit test-integration test smoke-import ci migrate run-api run-worker run-flusher smoke bench
 
 env: $(ENV_FILE)
 
@@ -16,10 +16,13 @@ $(VENV)/bin/python:
 	$(UV) venv $(VENV)
 
 install: env venv
-	$(UV) sync
+	$(UV) sync --all-groups
 
 dev: env venv
 	$(UV_RUN) uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+
+format-check: env venv
+	$(UV_RUN) ruff format --check backend tests
 
 lint: env venv
 	$(UV_RUN) ruff check backend tests
@@ -37,6 +40,11 @@ test-integration: env venv
 
 test: env venv
 	$(UV_RUN) pytest tests -q
+
+smoke-import: env venv
+	$(UV_RUN) python -c "from backend.main import app; assert app.title == 'GPU Inference Backend'"
+
+ci: format-check lint test-unit smoke-import
 
 migrate: env venv
 	$(UV_RUN) alembic upgrade head

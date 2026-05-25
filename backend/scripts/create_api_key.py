@@ -1,2 +1,1 @@
 """Create an API key."""
-
