@@ -14,9 +14,14 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "mypy>=1.10.0",
     "pytest>=8.0.0",
     "ruff>=0.5.0",
 ]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
 
 [tool.ruff]
 line-length = 100
@@ -24,4 +29,3 @@ target-version = "py311"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

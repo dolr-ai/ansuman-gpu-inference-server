@@ -1,2 +1,1 @@
 """Tracing integration."""
-

@@ -1,2 +1,1 @@
 """Access logging middleware."""
-

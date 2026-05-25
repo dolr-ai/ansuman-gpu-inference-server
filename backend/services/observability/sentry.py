@@ -1,2 +1,1 @@
 """Sentry integration."""
-

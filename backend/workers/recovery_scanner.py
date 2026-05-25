@@ -1,2 +1,1 @@
 """Recovery scanner worker entrypoint."""
-

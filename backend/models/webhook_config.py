@@ -1,2 +1,1 @@
 """Webhook configuration model."""
-

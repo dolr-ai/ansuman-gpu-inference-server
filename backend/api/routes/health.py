@@ -9,4 +9,3 @@ router = APIRouter(prefix="/health", tags=["health"])
 async def health() -> dict[str, str]:
     """Return service health."""
     return {"status": "ok"}
-

@@ -1,2 +1,1 @@
 """Request timing middleware."""
-

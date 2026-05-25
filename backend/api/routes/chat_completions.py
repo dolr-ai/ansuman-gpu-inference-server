@@ -1,2 +1,1 @@
 """Chat completion routes."""
-

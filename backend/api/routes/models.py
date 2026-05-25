@@ -1,2 +1,1 @@
 """Model listing routes."""
-
