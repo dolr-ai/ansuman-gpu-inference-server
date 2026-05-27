@@ -3,10 +3,9 @@
 Backend skeleton for a GPU inference gateway. The target deployment is a Vast.ai GPU
 container exposed through Cloudflare Tunnel at `https://model.ansuman.yral.com`.
 
-Current implemented API: `/health`.
-
-Planned API: OpenAI-compatible `/v1/models` and `/v1/chat/completions` through a
-FastAPI gateway on port `8000`, forwarding to private local vLLM on port `8001`.
+Current implemented API: `/health`, `/v1/models`, and OpenAI-compatible
+`/v1/chat/completions` through a FastAPI gateway on port `8000`, forwarding to
+private local vLLM on port `8001`.
 
 ## Development
 

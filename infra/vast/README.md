@@ -16,4 +16,5 @@ Start command:
 ```
 
 Read `docs/vast-deployment.md` before using this for a real instance. The current
-backend only implements `/health`; inference routes are still TODO.
+backend exposes `/health`, `/v1/models`, and `/v1/chat/completions`; auth,
+rate limits, and accounting are still later implementation phases.
