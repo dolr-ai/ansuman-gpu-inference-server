@@ -2,7 +2,6 @@ tunnel: gpu-inference-backend
 credentials-file: /etc/cloudflared/credentials.json
 
 ingress:
-  - hostname: inference.example.com
-    service: http://localhost:8000
+  - hostname: model.ansuman.yral.com
+    service: http://127.0.0.1:8000
   - service: http_status:404
-

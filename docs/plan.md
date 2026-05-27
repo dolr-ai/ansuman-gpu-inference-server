@@ -4,7 +4,7 @@
 Assumption: you have **one Vast AI host with 4 GPUs**, connected through **Cloudflare Tunnel**, serving:
 
 ```text
-https://nsfw-model.ansuman.yral.com
+https://model.ansuman.yral.com
 ```
 
 You want to run one large model across the 4 GPUs as **one logical inference worker**.
@@ -17,11 +17,18 @@ Before deploying the GPU inference server, prepare the external infrastructure t
 
 ## 0.1 ClickHouse prerequisite
 
-Use the existing ClickHouse cluster:
+Use the existing ClickHouse cluster documented under `self-hosted-services/`:
 
 ```text
-clickhouse.ansuman.yral.com
+ansuman-1: ClickHouse active target through HAProxy HTTPS :8443
+ansuman-3: first ClickHouse backup target
+ansuman-2: second ClickHouse backup / passive standby target
 ```
+
+Do not assume `clickhouse.ansuman.yral.com` is the application endpoint until that
+hostname is explicitly validated end to end. DNS resolution alone is not enough; the
+Vast container must be able to authenticate and run a test insert/select through the
+chosen ClickHouse HTTPS endpoint.
 
 Create a dedicated ClickHouse user for the GPU inference service.
 
@@ -46,11 +53,18 @@ The GPU server should not run ClickHouse locally.
 
 ## 0.2 Postgres prerequisite
 
-Use the existing external Postgres server:
+Use the existing external Postgres pair documented under `self-hosted-services/`:
 
 ```text
-postgress.ansuman.yral.com
+ansuman-1: PostgreSQL 16 primary, Tailscale 100.78.17.101:5432
+ansuman-2: PostgreSQL 16 standby/backup, Tailscale 100.79.99.107:5432
+ansuman-1/2 local HA path: PgBouncer 127.0.0.1:6432 -> HAProxy 127.0.0.1:15432 -> current primary
 ```
+
+Do not use `postgres.ansuman.yral.com` or `postgress.ansuman.yral.com` for
+`DATABASE_URL` until a PostgreSQL TCP route for the Vast container has been explicitly
+created and validated. Pick the real private path first: Tailscale to the approved
+Postgres endpoint, or a deliberately created HAProxy/TCP endpoint.
 
 Create a dedicated Postgres user for the GPU inference service.
 
@@ -94,6 +108,10 @@ Postgres server if possible
 ClickHouse server if possible
 Prometheus/Grafana server
 ```
+
+For the current ansuman estate, that means private reachability to `ansuman-1` and
+`ansuman-2` for Postgres, all three ansuman nodes for ClickHouse, and `ansuman-3` for
+the active Sentry origin.
 
 Use Tailscale/private networking for internal metrics and admin access wherever possible.
 
@@ -161,7 +179,13 @@ Do not expose Prometheus or Grafana publicly unless protected.
 
 ## 0.5 Sentry prerequisite
 
-Use the existing self-hosted Sentry instance.
+Use the existing self-hosted Sentry instance:
+
+```text
+https://sentry.ansuman.yral.com
+active runtime: ansuman-3, 100.64.20.118:19000
+DR target: ansuman-1, not active unless intentionally failed over
+```
 
 Create a dedicated Sentry project:
 
@@ -240,7 +264,7 @@ This is a better plan than deploying the GPU server first and then discovering t
 ```text
 Client / App
   ↓
-https://nsfw-model.ansuman.yral.com
+https://model.ansuman.yral.com
   ↓
 Cloudflare Tunnel
   ↓
@@ -364,7 +388,7 @@ event logging
 Your public endpoint:
 
 ```text
-https://nsfw-model.ansuman.yral.com
+https://model.ansuman.yral.com
 ```
 
 should point to Cloudflare Tunnel.
@@ -2926,9 +2950,16 @@ The GPU container is the inference runtime boundary.
 
 ## 21.2 External ClickHouse rule
 
-ClickHouse already exists externally at:
+ClickHouse already exists externally on the ansuman cluster:
 
-`clickhouse.ansuman.yral.com`
+```text
+ansuman-1 active through HAProxy HTTPS :8443
+ansuman-3 first backup
+ansuman-2 second backup / passive standby
+```
+
+Do not assume `clickhouse.ansuman.yral.com` is usable until the hostname and service
+route are explicitly validated from the GPU container.
 
 The coding agent must not install, bootstrap, or manage a local ClickHouse server on the GPU container.
 
@@ -2940,9 +2971,16 @@ ClickHouse must not be used for API key validation, quota correctness, batch job
 
 ## 21.3 External Postgres rule
 
-Postgres already exists externally at:
+Postgres already exists externally on the ansuman cluster:
 
-`postgress.ansuman.yral.com`
+```text
+ansuman-1 primary: 100.78.17.101:5432
+ansuman-2 standby/backup: 100.79.99.107:5432
+```
+
+Do not assume `postgress.ansuman.yral.com` or `postgres.ansuman.yral.com` is the
+correct `DATABASE_URL` until a PostgreSQL TCP route for the GPU container is explicitly
+created and validated.
 
 The coding agent must not install or run Postgres on the GPU container.
 

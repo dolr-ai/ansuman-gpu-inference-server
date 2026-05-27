@@ -1,6 +1,12 @@
 # GPU Inference Backend
 
-Backend skeleton for GPU inference APIs, authentication, rate limits, analytics, batch jobs, and operational tooling.
+Backend skeleton for a GPU inference gateway. The target deployment is a Vast.ai GPU
+container exposed through Cloudflare Tunnel at `https://model.ansuman.yral.com`.
+
+Current implemented API: `/health`.
+
+Planned API: OpenAI-compatible `/v1/models` and `/v1/chat/completions` through a
+FastAPI gateway on port `8000`, forwarding to private local vLLM on port `8001`.
 
 ## Development
 
@@ -9,4 +15,9 @@ uv sync
 uv run uvicorn backend.main:app --reload
 ```
 
-Cwazzzy readme 
+Deployment planning:
+
+- `docs/plan.md`
+- `docs/todo.md`
+- `docs/vast-deployment.md`
+- `infra/vast/`

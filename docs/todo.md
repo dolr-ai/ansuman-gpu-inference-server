@@ -29,17 +29,17 @@ Inside container:
     127.0.0.1:8000
 
   cloudflared:
-    nsfw-model.ansuman.yral.com → http://127.0.0.1:8000
+    model.ansuman.yral.com → http://127.0.0.1:8000
 
 External:
   Postgres:
-    postgress.ansuman.yral.com
+    ansuman-1 primary / ansuman-2 standby; do not assume postgres*.ansuman.yral.com yet
 
   ClickHouse:
-    clickhouse.ansuman.yral.com
+    ansuman-1 active / ansuman-3 backup / ansuman-2 backup through HAProxy HTTPS :8443
 
   Sentry:
-    existing self-hosted Sentry
+    sentry.ansuman.yral.com, active runtime on ansuman-3
 
   Prometheus/Grafana:
     ansuman-1 / ansuman-2 / ansuman-3
@@ -123,6 +123,7 @@ This happens before coding the production path.
 
 * [ ] Create dedicated ClickHouse user for this service.
 * [ ] Restrict permissions to inference analytics DB/tables only.
+* [ ] Decide the exact endpoint: private ansuman HAProxy HTTPS `:8443`, or an explicitly created and validated DNS hostname.
 * [ ] Verify connection from a test machine or Vast container.
 * [ ] Verify insert.
 * [ ] Verify select.
@@ -133,7 +134,7 @@ This happens before coding the production path.
 Done when:
 
 ```text
-CLICKHOUSE_HOST=clickhouse.ansuman.yral.com works
+Chosen ClickHouse endpoint works from the Vast container
 test insert/select works
 user is not overprivileged
 ```
@@ -146,6 +147,7 @@ user is not overprivileged
 * [ ] Verify connection pooling.
 * [ ] Verify read/write.
 * [ ] Confirm network/firewall/Tailscale access.
+* [ ] Decide the exact Postgres endpoint for the Vast container; do not assume `postgres.ansuman.yral.com` or `postgress.ansuman.yral.com`.
 * [ ] Save credentials as environment variables.
 
 Done when:
@@ -153,12 +155,14 @@ Done when:
 ```text
 POSTGRES_DSN works
 dedicated user can access only required tables
+DSN points to a validated ansuman-1/ansuman-2 private route or an explicitly created PostgreSQL TCP endpoint
 ```
 
 ## 0.3 Sentry
 
 * [ ] Create Sentry project: `gpu-inference-server` or `yral-gpu-inference`.
 * [ ] Get DSN.
+* [ ] Use the shared Sentry service at `https://sentry.ansuman.yral.com` unless a new Sentry route is intentionally created.
 * [ ] Confirm test exception appears.
 * [ ] Confirm payload scrubbing.
 
@@ -694,7 +698,7 @@ FastAPI talks to real local vLLM, and vLLM is not publicly exposed.
 ## 15.1 Tunnel config
 
 * [ ] Install/configure `cloudflared` inside Vast container.
-* [ ] Route `nsfw-model.ansuman.yral.com` to `http://127.0.0.1:8000`.
+* [ ] Route `model.ansuman.yral.com` to `http://127.0.0.1:8000`.
 * [ ] Do not route vLLM port.
 * [ ] Do not route Redis.
 * [ ] Do not route `/metrics`.
