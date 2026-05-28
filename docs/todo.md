@@ -29,11 +29,11 @@ Inside container:
     127.0.0.1:8000
 
   cloudflared:
-    nsfw-model.ansuman.yral.com → http://127.0.0.1:8000
+    model.ansuman.yral.com -> http://127.0.0.1:8000
 
 External:
   Postgres:
-    postgress.ansuman.yral.com
+    100.78.17.101:15432 / 100.79.99.107:15432 over Tailscale HAProxy
 
   ClickHouse:
     clickhouse.ansuman.yral.com
@@ -121,44 +121,55 @@ This happens before coding the production path.
 
 ## 0.1 ClickHouse access
 
-* [ ] Create dedicated ClickHouse user for this service.
-* [ ] Restrict permissions to inference analytics DB/tables only.
-* [ ] Verify connection from a test machine or Vast container.
+* [x] Create dedicated ClickHouse user for this service.
+* [x] Restrict permissions to inference analytics DB/tables only.
+* [x] Verify connection from a test machine.
+* [x] Allow `8443/tcp` on `tailscale0` from tailnet sources in UFW on ansuman-1 and ansuman-2.
 * [ ] Verify insert.
-* [ ] Verify select.
+* [x] Verify select.
 * [ ] Verify batch insert.
 * [ ] Confirm timeout behavior.
-* [ ] Save credentials as environment variables.
+* [x] Save credentials as environment variables in local ignored `.env`.
 
 Done when:
 
 ```text
-CLICKHOUSE_HOST=clickhouse.ansuman.yral.com works
+CLICKHOUSE_URL=https://100.78.17.101:8443 works
 test insert/select works
 user is not overprivileged
 ```
 
 ## 0.2 Postgres access
 
-* [ ] Create dedicated Postgres user.
-* [ ] Create database/schema for inference service.
-* [ ] Restrict permissions.
+* [x] Add HAProxy Postgres TCP listener on ansuman-1 Tailscale IP `100.78.17.101:15432`.
+* [x] Add HAProxy Postgres TCP listener on ansuman-2 Tailscale IP `100.79.99.107:15432`.
+* [x] Verify ansuman-1 is PostgreSQL primary and ansuman-2 is standby with `pg_is_in_recovery()`.
+* [x] Allow `15432/tcp` on `tailscale0` from tailnet sources in UFW on ansuman-1 and ansuman-2.
+* [x] Create dedicated Postgres user.
+* [x] Create database/schema for inference service.
+* [x] Restrict permissions.
 * [ ] Verify connection pooling.
-* [ ] Verify read/write.
-* [ ] Confirm network/firewall/Tailscale access.
-* [ ] Save credentials as environment variables.
+* [x] Verify read/write.
+* [x] Confirm network/firewall/Tailscale access from current tailnet machine.
+* [ ] Install and join Tailscale on the Vast instance.
+* [x] Store SQLAlchemy asyncpg multi-host DSN with both HAProxy listener IPs in local ignored `.env`.
+* [ ] Add `asyncpg` runtime dependency with the SQLAlchemy DB layer.
+* [ ] Tighten SQLAlchemy lower bound to `>=2.0.18` when DB code lands.
+* [x] Save credentials as environment variables in local ignored `.env`.
 
 Done when:
 
 ```text
-POSTGRES_DSN works
+DATABASE_URL works through 100.78.17.101:15432 and 100.79.99.107:15432
 dedicated user can access only required tables
 ```
 
 ## 0.3 Sentry
 
-* [ ] Create Sentry project: `gpu-inference-server` or `yral-gpu-inference`.
-* [ ] Get DSN.
+* [x] Create Sentry project.
+* [x] Get DSN.
+* [x] Save DSN in local ignored `.env`.
+* [ ] Wire `sentry-sdk` initialization into FastAPI startup/config.
 * [ ] Confirm test exception appears.
 * [ ] Confirm payload scrubbing.
 
@@ -168,7 +179,9 @@ Done when:
 test exception appears with environment, release, and request_id
 ```
 
-## 0.4 Prometheus/Grafana
+## 0.4 Prometheus/Grafana (deferred)
+
+Do later. This is intentionally not part of the immediate Vast bootstrap.
 
 * [ ] Run Prometheus/Grafana on `ansuman-1`.
 * [ ] Prepare scrape config for FastAPI metrics.
@@ -694,7 +707,7 @@ FastAPI talks to real local vLLM, and vLLM is not publicly exposed.
 ## 15.1 Tunnel config
 
 * [ ] Install/configure `cloudflared` inside Vast container.
-* [ ] Route `nsfw-model.ansuman.yral.com` to `http://127.0.0.1:8000`.
+* [ ] Route `model.ansuman.yral.com` to `http://127.0.0.1:8000`.
 * [ ] Do not route vLLM port.
 * [ ] Do not route Redis.
 * [ ] Do not route `/metrics`.
