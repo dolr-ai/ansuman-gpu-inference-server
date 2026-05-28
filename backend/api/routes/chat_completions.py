@@ -32,6 +32,12 @@ from backend.services.inference.token_accounting import (
     usage_from_stream_text,
 )
 from backend.services.inference.usage_finalizer import RequestAuditService
+from backend.services.observability.metrics import (
+    record_stream_finished,
+    record_stream_started,
+    record_stream_ttft,
+)
+from backend.services.observability.sentry import bind_request_context, capture_request_exception
 from backend.services.rate_limit.admission import AdmissionLease, AdmissionService
 from backend.services.rate_limit.concurrency_limiter import ConcurrencyLimiter
 from backend.services.rate_limit.quota_reserver import QuotaReserver
@@ -102,6 +108,7 @@ async def create_chat_completion(
     )
     payload = normalize_chat_completion_payload(request_body)
     request_id = getattr(request.state, "request_id", None)
+    bind_request_context(request, model=request_body.model, stream=request_body.stream)
     audit_service = _get_or_create_audit_service(request)
     audit_record_id = await audit_service.start(
         build_audit_start(
@@ -159,6 +166,7 @@ async def create_chat_completion(
         )
         return JSONResponse(content=response, headers=headers)
     except Exception as exc:
+        capture_request_exception(request, exc, model=request_body.model, stream=False)
         await admission_lease.finalize_tokens(actual_tokens=0, release_all=True)
         failed_usage = UsageRecord(
             prompt_tokens=token_plan.prompt_tokens,
@@ -207,6 +215,7 @@ async def _stream_response(
 ) -> AsyncIterator[str]:
     started_at = perf_counter()
     first_token_seen = False
+    record_stream_started()
     upstream_stream = client.stream_chat_completion(payload)
     heartbeat_stream = stream_with_heartbeats(upstream_stream)
     event_stream = ensure_done_event(heartbeat_stream)
@@ -220,14 +229,17 @@ async def _stream_response(
                 break
             completion_text += stream_delta_text(event)
             if not first_token_seen and event.startswith("data: ") and event.strip() != DONE_LINE:
-                ttft_ms = int((perf_counter() - started_at) * 1000)
+                ttft_seconds = perf_counter() - started_at
+                ttft_ms = int(ttft_seconds * 1000)
                 request.state.ttft_ms = ttft_ms
                 request.app.state.last_stream_ttft_ms = ttft_ms
+                record_stream_ttft(model=model, ttft_seconds=ttft_seconds)
                 first_token_seen = True
             yield event
     except Exception as exc:
         status = "failed"
         error_code = getattr(exc, "code", "internal_server_error")
+        capture_request_exception(request, exc, model=model, stream=True)
         raise
     finally:
         await _close_async_iterator(event_stream)
@@ -267,6 +279,7 @@ async def _stream_response(
                     )
         if admission_lease is not None:
             await admission_lease.release()
+        record_stream_finished()
 
 
 async def _close_async_iterator(iterator: AsyncIterator[str]) -> None:

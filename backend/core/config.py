@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     api_key_prefix: str = Field(default="an", alias="API_KEY_PREFIX")
     sentry_dsn: str | None = Field(default=None, alias="SENTRY_DSN")
     sentry_send_default_pii: bool = Field(default=False, alias="SENTRY_SEND_DEFAULT_PII")
+    sentry_traces_sample_rate: float = Field(default=0.05, alias="SENTRY_TRACES_SAMPLE_RATE")
     service_name: str = Field(default="gpu-inference-backend", alias="SERVICE_NAME")
     release: str | None = Field(default=None, alias="RELEASE")
 

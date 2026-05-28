@@ -11,6 +11,7 @@ from starlette.types import ExceptionHandler
 
 from backend.core.constants import REQUEST_ID_HEADER
 from backend.core.errors import AppError, openai_error_object
+from backend.services.observability.sentry import capture_request_exception
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ def _error_response(
 
 
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    capture_request_exception(request, exc)
     return _error_response(
         request,
         status_code=exc.status_code,
@@ -80,6 +82,7 @@ async def validation_error_handler(
 
 async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.exception("unhandled application error", exc_info=exc)
+    capture_request_exception(request, exc)
     return _error_response(
         request,
         status_code=500,

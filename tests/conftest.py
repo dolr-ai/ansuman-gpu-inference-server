@@ -1,8 +1,23 @@
 """Pytest configuration."""
 
+import pytest
+
+from backend.core.config import get_settings
 from backend.services.auth.api_key_service import AuthContext, StaticApiKeyAuthService
 from backend.services.inference.usage_finalizer import InMemoryRequestAuditService
+from backend.services.observability import sentry
 from backend.services.rate_limit.admission import NoopAdmissionService
+
+
+@pytest.fixture(autouse=True)
+def disable_sentry_dsn_for_tests(monkeypatch):
+    monkeypatch.setenv("SENTRY_DSN", "")
+    monkeypatch.setattr(sentry, "_sentry_enabled", False)
+    get_settings.cache_clear()
+    yield
+    monkeypatch.setattr(sentry, "_sentry_enabled", False)
+    get_settings.cache_clear()
+
 
 TEST_API_KEY = "an_test_valid"
 

@@ -169,9 +169,9 @@ dedicated user can access only required tables
 * [x] Create Sentry project.
 * [x] Get DSN.
 * [x] Save DSN in local ignored `.env`.
-* [ ] Wire `sentry-sdk` initialization into FastAPI startup/config.
+* [x] Wire `sentry-sdk` initialization into FastAPI startup/config.
 * [ ] Confirm test exception appears.
-* [ ] Confirm payload scrubbing.
+* [x] Confirm payload scrubbing.
 
 Done when:
 
@@ -636,22 +636,46 @@ Analytics are asynchronous, batched, and safe under ClickHouse failure.
 
 ## 11.1 Sentry setup
 
-* [ ] Initialize Sentry only when DSN exists.
-* [ ] Add environment and release tags.
-* [ ] Add request ID, user ID, project ID, API key ID, model, endpoint, stream flag.
-* [ ] Scrub API keys, auth headers, prompts, DB credentials, tunnel tokens.
-* [ ] Capture unhandled exceptions.
-* [ ] Capture background worker failures.
-* [ ] Capture ClickHouse flusher failures after retry threshold.
-* [ ] Capture vLLM timeout/parsing failures.
-* [ ] Do not capture normal 400/401/429 noise.
+* [x] Initialize Sentry only when DSN exists.
+* [x] Add environment and release tags.
+* [x] Add request ID, user ID, project ID, API key ID, model, endpoint, stream flag.
+* [x] Scrub API keys, auth headers, prompts, DB credentials, tunnel tokens.
+* [x] Capture unhandled exceptions.
+* [x] Capture background worker failures.
+* [x] Capture ClickHouse flusher failures after retry threshold.
+* [x] Capture vLLM timeout/parsing failures.
+* [x] Do not capture normal 400/401/429 noise.
 
 Minimal tests:
 
-* [ ] Unit: Sentry scrubber removes secrets.
-* [ ] Unit: expected 401/429 are not captured.
-* [ ] Integration: forced exception is captured in test transport.
-* [ ] Integration: Sentry unavailable does not break request.
+* [x] Unit: Sentry scrubber removes secrets.
+* [x] Unit: expected 401/429 are not captured.
+* [x] Integration: forced exception is captured in test transport.
+* [x] Integration: Sentry unavailable does not break request.
+
+Implementation notes for future sessions:
+
+```text
+Sentry lives in backend/services/observability/sentry.py. It no-ops unless
+initialize_sentry(...) succeeds with a configured SENTRY_DSN, and capture calls are
+wrapped so Sentry outage/capture failure cannot change API behavior.
+
+Request exception capture is idempotent per request via
+request.state.sentry_exception_captured. Route-level capture preserves model/stream
+tags for vLLM failures; the global error handler covers unhandled/server errors.
+
+The scrubber redacts auth headers, raw `an_...`/`sk-...` keys, prompt/message/input
+payload fields, DB URL credentials, passwords/secrets/tokens, and tunnel tokens.
+It intentionally preserves api_key_id because that is a safe identifier needed for
+debugging.
+
+Tests force SENTRY_DSN empty in tests/conftest.py so a developer's local ignored
+.env cannot accidentally send test failures to the real self-hosted Sentry. Tests
+that need Sentry use injected Settings plus a fake SDK.
+
+backend/workers/batch_worker.py only has Phase 11 process-level Sentry wrapping
+right now. The actual batch worker behavior is still Phase 13 work.
+```
 
 Done when:
 

@@ -8,12 +8,14 @@ from fastapi import FastAPI
 
 from backend.api.routes.chat_completions import router as chat_completions_router
 from backend.api.routes.health import router as health_router
+from backend.api.routes.metrics import router as metrics_router
 from backend.api.routes.models import router as models_router
 from backend.core.config import Settings, get_settings
 from backend.core.lifecycle import shutdown, startup
 from backend.middlewares.auth import ApiKeyAuthMiddleware
 from backend.middlewares.error_handler import install_error_handlers
 from backend.middlewares.request_id import RequestIdMiddleware
+from backend.services.observability.metrics import MetricsMiddleware
 from backend.services.vllm.client import VLLMClient
 
 
@@ -54,9 +56,11 @@ def create_app(
         app_instance.state.analytics_collector = analytics_collector
     app_instance.add_middleware(ApiKeyAuthMiddleware)
     app_instance.add_middleware(RequestIdMiddleware)
+    app_instance.add_middleware(MetricsMiddleware)
     install_error_handlers(app_instance)
     app_instance.include_router(health_router)
     app_instance.include_router(models_router)
+    app_instance.include_router(metrics_router)
     app_instance.include_router(chat_completions_router)
     return app_instance
 

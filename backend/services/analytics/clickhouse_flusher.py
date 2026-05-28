@@ -11,6 +11,8 @@ from backend.services.analytics.event_models import (
     AnalyticsTable,
     columns_for_table,
 )
+from backend.services.observability.metrics import record_clickhouse_flush_failure
+from backend.services.observability.sentry import capture_exception
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +50,22 @@ class ClickHouseFlusher:
         try:
             await self._insert_with_retry(events)
             return True
-        except Exception:
+        except Exception as exc:
             self.flush_failures += 1
+            record_clickhouse_flush_failure()
             logger.exception("clickhouse analytics flush failed")
+            capture_exception(
+                exc,
+                tags={
+                    "component": "analytics_flusher",
+                    "error_code": "clickhouse_flush_failed",
+                },
+                context={
+                    "flush_failures": self.flush_failures,
+                    "event_count": len(events),
+                    "tables": sorted({event.table for event in events}),
+                },
+            )
             self.collector.requeue_front(events)
             return False
 

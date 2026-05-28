@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from backend.core.config import Settings
 from backend.core.logging import configure_logging
+from backend.services.observability.sentry import initialize_sentry
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 async def startup(app: FastAPI, settings: Settings) -> None:
     """Initialize application runtime state."""
     configure_logging(settings.log_level)
+    app.state.sentry_enabled = initialize_sentry(settings)
     app.state.settings = settings
     app.state.ready = True
     logger.info("application startup complete")
