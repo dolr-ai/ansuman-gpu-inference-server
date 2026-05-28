@@ -3,7 +3,7 @@ ENV_FILE := .env
 UV := uv
 UV_RUN := $(UV) run --env-file $(ENV_FILE)
 
-.PHONY: install venv env dev format-check lint format test-unit test-integration test smoke-import ci migrate run-api run-worker run-flusher smoke bench
+.PHONY: install venv env dev format-check lint format test-unit test-integration test smoke-import ci migrate run-api run-worker run-recovery run-flusher smoke bench
 
 env: $(ENV_FILE)
 
@@ -54,6 +54,9 @@ run-api: env venv
 
 run-worker: env venv
 	$(UV_RUN) python -m backend.workers.batch_worker
+
+run-recovery: env venv
+	$(UV_RUN) python -m backend.workers.recovery_scanner
 
 run-flusher: env venv
 	$(UV_RUN) python -m backend.workers.analytics_flusher

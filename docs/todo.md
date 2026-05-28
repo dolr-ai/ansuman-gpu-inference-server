@@ -85,6 +85,7 @@ make test
 make migrate
 make run-api
 make run-worker
+make run-recovery
 make run-flusher
 make run-vllm
 make run-redis
@@ -673,8 +674,8 @@ Tests force SENTRY_DSN empty in tests/conftest.py so a developer's local ignored
 .env cannot accidentally send test failures to the real self-hosted Sentry. Tests
 that need Sentry use injected Settings plus a fake SDK.
 
-backend/workers/batch_worker.py only has Phase 11 process-level Sentry wrapping
-right now. The actual batch worker behavior is still Phase 13 work.
+backend/workers/batch_worker.py has Phase 11 process-level Sentry wrapping;
+Phase 13 now adds the actual batch worker loop on top of it.
 ```
 
 Done when:
@@ -735,38 +736,70 @@ Prometheus can observe app health without exposing metrics publicly.
 
 ## 13.1 Batch API
 
-* [ ] Add `POST /v1/batch/jobs`.
-* [ ] Add `GET /v1/batch/jobs/{id}`.
-* [ ] Add `POST /v1/batch/jobs/{id}/cancel`.
-* [ ] Store batch job in Postgres.
-* [ ] Enqueue job in Redis.
-* [ ] Return job ID immediately.
+* [x] Add `POST /v1/batch/jobs`.
+* [x] Add `GET /v1/batch/jobs/{id}`.
+* [x] Add `POST /v1/batch/jobs/{id}/cancel`.
+* [x] Store batch job in Postgres.
+* [x] Enqueue job in Redis.
+* [x] Return job ID immediately.
 
 ## 13.2 Worker
 
-* [ ] Worker pulls from Redis.
-* [ ] Worker checks Postgres source of truth.
-* [ ] Worker checks online load before sending to vLLM.
-* [ ] Worker uses the same internal inference lifecycle as online requests.
-* [ ] Worker records usage.
-* [ ] Worker writes audit record.
-* [ ] Worker emits ClickHouse analytics.
-* [ ] Worker updates job status.
+* [x] Worker pulls from Redis.
+* [x] Worker checks Postgres source of truth.
+* [x] Worker checks online load before sending to vLLM.
+* [x] Worker uses the same internal inference lifecycle as online requests.
+* [x] Worker records usage.
+* [x] Worker writes audit record.
+* [x] Worker emits ClickHouse analytics.
+* [x] Worker updates job status.
 
 ## 13.3 Recovery scanner
 
-* [ ] Periodically find queued/runnable Postgres jobs not present in Redis.
-* [ ] Re-enqueue safely.
-* [ ] Avoid duplicate execution through locks/status transitions.
+* [x] Periodically find queued/runnable Postgres jobs not present in Redis.
+* [x] Re-enqueue safely.
+* [x] Avoid duplicate execution through locks/status transitions.
 
 Minimal tests:
 
-* [ ] Unit: batch status transitions are valid.
-* [ ] Unit: worker does not run cancelled job.
-* [ ] Unit: recovery scanner re-enqueues stuck queued job.
-* [ ] Integration: submit job → worker processes → result stored.
-* [ ] Integration: Redis enqueue failure still leaves recoverable Postgres job.
-* [ ] Integration: batch path writes usage/audit/analytics like online path.
+* [x] Unit: batch status transitions are valid.
+* [x] Unit: worker does not run cancelled job.
+* [x] Unit: recovery scanner re-enqueues stuck queued job.
+* [x] Integration: submit job → worker processes → result stored.
+* [x] Integration: Redis enqueue failure still leaves recoverable Postgres job.
+* [x] Integration: batch path writes usage/audit/analytics like online path.
+
+Implementation notes for future sessions:
+
+```text
+Batch API routes are wired in backend/api/routes/batch_jobs.py and protected by
+the existing API-key middleware. The MVP accepts one non-streaming chat-completion
+payload per job; stream=true is rejected. It does not implement uploaded JSONL or
+multi-request batch files yet.
+
+The existing Phase 6 batch_jobs schema does not have dedicated input_payload or
+result_payload columns from docs/plan.md, so Phase 13 stores input_payload,
+result_payload, usage, and timestamps inside batch_jobs.metadata_json. Add a
+future migration with first-class columns if queryability or large payload storage
+matters.
+
+Worker execution is in backend/services/batch/batch_worker.py and uses the same
+service interfaces as online non-streaming requests: token planning, Redis
+admission/quota lease, request audit, vLLM client, usage finalization, analytics
+event emission, and Sentry capture. It is non-streaming only.
+
+The worker supports an injectable should_run_job hook for online-load policy. The
+default worker entrypoint currently relies on AdmissionService's Redis overload
+check; richer vLLM/GPU load checks remain Phase 19 capacity/overload work.
+
+Redis enqueue failure after Postgres job creation intentionally returns a queued
+job. backend/services/batch/recovery_scanner.py re-enqueues queued jobs missing
+from Redis. Use make run-recovery to run that scanner loop.
+
+Job terminal status is `succeeded`/`failed`/`cancelled` in the batch_jobs row and
+API response. If product API compatibility later needs `completed`, adjust the
+status vocabulary and tests together.
+```
 
 Done when:
 
