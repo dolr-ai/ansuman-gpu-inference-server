@@ -30,7 +30,9 @@ def _error_response(
     param: str | None = None,
 ) -> JSONResponse:
     request_id = _request_id(request)
-    headers = {REQUEST_ID_HEADER: request_id} if request_id is not None else None
+    headers = {"x-error-code": code}
+    if request_id is not None:
+        headers[REQUEST_ID_HEADER] = request_id
     return JSONResponse(
         status_code=status_code,
         content=openai_error_object(

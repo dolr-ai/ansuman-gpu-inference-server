@@ -184,11 +184,11 @@ test exception appears with environment, release, and request_id
 Do later. This is intentionally not part of the immediate Vast bootstrap.
 
 * [ ] Run Prometheus/Grafana on `ansuman-1`.
-* [ ] Prepare scrape config for FastAPI metrics.
+* [x] Prepare scrape config for FastAPI metrics.
 * [ ] Prepare scrape config for vLLM metrics.
 * [ ] Prepare scrape config for DCGM Exporter.
 * [ ] Ensure scrape happens over private network/Tailscale.
-* [ ] Do not expose `/metrics` publicly.
+* [x] Do not expose `/metrics` publicly.
 
 Done when:
 
@@ -689,22 +689,39 @@ Sentry helps debug failures but is never in the request-critical path.
 
 ## 12.1 FastAPI metrics
 
-* [ ] Add private `/metrics`.
-* [ ] Add request count.
-* [ ] Add latency histogram.
-* [ ] Add TTFT histogram.
-* [ ] Add active stream gauge.
-* [ ] Add 429/503 counters.
-* [ ] Add analytics queue size.
-* [ ] Add ClickHouse flush failure counter.
-* [ ] Add Redis failure counter.
-* [ ] Add vLLM upstream error counter.
+* [x] Add private `/metrics`.
+* [x] Add request count.
+* [x] Add latency histogram.
+* [x] Add TTFT histogram.
+* [x] Add active stream gauge.
+* [x] Add 429/503 counters.
+* [x] Add analytics queue size.
+* [x] Add ClickHouse flush failure counter.
+* [x] Add Redis failure counter.
+* [x] Add vLLM upstream error counter.
 
 Minimal tests:
 
-* [ ] Unit: metrics counters increment.
-* [ ] Integration: `/metrics` exposes expected metric names.
-* [ ] Integration: `/metrics` is not exposed through public Cloudflare route config.
+* [x] Unit: metrics counters increment.
+* [x] Integration: `/metrics` exposes expected metric names.
+* [x] Integration: `/metrics` is not exposed through public Cloudflare route config.
+
+Implementation notes for future sessions:
+
+```text
+Prometheus metrics live in backend/services/observability/metrics.py and use a
+dedicated CollectorRegistry. MetricsMiddleware records request count/latency and
+skips /metrics itself. Error responses include x-error-code so 429/503 counters
+can label the app error code.
+
+infra/cloudflared/config.yml.example explicitly blocks path: /metrics before the
+general public FastAPI route. Keep that rule ordering in the real Cloudflare
+Tunnel config; Cloudflare should expose only the OpenAI-compatible public API.
+
+The /metrics endpoint exposes the FastAPI process registry. If analytics_flusher
+or batch_worker run as separate processes, their process-local counters will need
+their own private metrics endpoint or another aggregation path to be scraped.
+```
 
 Done when:
 
