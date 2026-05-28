@@ -539,18 +539,29 @@ Every request has accounting, including success, failure, timeout, and disconnec
 
 ## 9.1 Audit lifecycle
 
-* [ ] Create audit record when request is accepted.
-* [ ] Update final status on completion/failure/disconnect.
-* [ ] Store request ID, user ID, project ID, API key ID, model, status, token counts, latency, error code.
-* [ ] Do not store full prompts by default.
-* [ ] Store prompt hash if needed.
+* [x] Create audit record when request is accepted.
+* [x] Update final status on completion/failure/disconnect.
+* [x] Store request ID, user ID, project ID, API key ID, model, status, token counts, latency, error code.
+* [x] Do not store full prompts by default.
+* [x] Store prompt hash if needed.
 
 Minimal tests:
 
-* [ ] Unit: audit record builder excludes raw prompt and API key.
-* [ ] Integration: success creates final audit record.
-* [ ] Integration: upstream timeout creates failed audit record.
-* [ ] Integration: client disconnect creates partial audit record.
+* [x] Unit: audit record builder excludes raw prompt and API key.
+* [x] Integration: success creates final audit record.
+* [x] Integration: upstream timeout creates failed audit record.
+* [x] Integration: client disconnect creates partial audit record.
+
+Implementation notes for future sessions:
+
+```text
+Production audit lifecycle uses RequestAuditService with SQLAlchemy async sessions
+and request_audit_records. Tests inject InMemoryRequestAuditService, so local test
+runs do not require live Postgres.
+
+Audit start data stores prompt_hash only. Raw prompts and raw API keys are not
+part of AuditStart or RequestAuditRecord.
+```
 
 Done when:
 

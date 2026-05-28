@@ -15,7 +15,7 @@ from backend.services.rate_limit.admission import AdmissionService
 from backend.services.rate_limit.concurrency_limiter import ConcurrencyLimiter
 from backend.services.rate_limit.quota_reserver import QuotaReserver
 from backend.services.rate_limit.rate_limiter import RateLimiter, tpm_key
-from tests.conftest import FakeRedis, auth_headers, auth_service_for_tests
+from tests.conftest import audit_service_for_tests, FakeRedis, auth_headers, auth_service_for_tests
 
 
 class OneTokenEstimator:
@@ -57,6 +57,7 @@ def test_completed_request_writes_correct_usage() -> None:
         vllm_client=FakeUsageVLLMClient(),
         auth_service=auth_service_for_tests(),
         admission_service=_admission_service(redis),
+        audit_service=audit_service_for_tests(),
         token_estimator=estimator,
     )
 

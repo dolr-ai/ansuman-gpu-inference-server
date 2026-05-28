@@ -10,7 +10,7 @@ from backend.services.auth.api_key_service import (
     StaticApiKeyAuthService,
     generate_api_key,
 )
-from tests.conftest import noop_admission_service
+from tests.conftest import audit_service_for_tests, noop_admission_service
 
 
 class FakeVLLMClient:
@@ -49,6 +49,7 @@ def test_generated_key_can_call_chat_completions() -> None:
         vllm_client=FakeVLLMClient(),
         auth_service=_auth_service(raw_key),
         admission_service=noop_admission_service(),
+        audit_service=audit_service_for_tests(),
     )
 
     with TestClient(app) as client:
@@ -68,6 +69,7 @@ def test_missing_key_cannot_call_chat_completions() -> None:
         vllm_client=FakeVLLMClient(),
         auth_service=_auth_service(raw_key),
         admission_service=noop_admission_service(),
+        audit_service=audit_service_for_tests(),
     )
 
     with TestClient(app) as client:
@@ -86,6 +88,7 @@ def test_revoked_key_cannot_call_chat_completions() -> None:
         vllm_client=FakeVLLMClient(),
         auth_service=_auth_service(raw_key, revoked=True),
         admission_service=noop_admission_service(),
+        audit_service=audit_service_for_tests(),
     )
 
     with TestClient(app) as client:

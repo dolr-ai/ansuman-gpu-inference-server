@@ -1,6 +1,7 @@
 """Pytest configuration."""
 
 from backend.services.auth.api_key_service import AuthContext, StaticApiKeyAuthService
+from backend.services.inference.usage_finalizer import InMemoryRequestAuditService
 from backend.services.rate_limit.admission import NoopAdmissionService
 
 TEST_API_KEY = "an_test_valid"
@@ -95,3 +96,7 @@ class FakeRedis:
 
 def noop_admission_service() -> NoopAdmissionService:
     return NoopAdmissionService()
+
+
+def audit_service_for_tests() -> InMemoryRequestAuditService:
+    return InMemoryRequestAuditService()

@@ -6,7 +6,12 @@ from fastapi.testclient import TestClient
 
 from backend.core.constants import REQUEST_ID_HEADER
 from backend.main import create_app
-from tests.conftest import auth_headers, auth_service_for_tests, noop_admission_service
+from tests.conftest import (
+    audit_service_for_tests,
+    auth_headers,
+    auth_service_for_tests,
+    noop_admission_service,
+)
 
 
 class FakeVLLMClient:
@@ -37,6 +42,7 @@ def test_fake_vllm_response_returns_through_chat_completions_route() -> None:
             vllm_client=fake_client,
             auth_service=auth_service_for_tests(),
             admission_service=noop_admission_service(),
+            audit_service=audit_service_for_tests(),
         )
     ) as client:
         response = client.post(
@@ -64,6 +70,7 @@ def test_invalid_chat_completion_payload_returns_400_bad_request() -> None:
             vllm_client=FakeVLLMClient(),
             auth_service=auth_service_for_tests(),
             admission_service=noop_admission_service(),
+            audit_service=audit_service_for_tests(),
         )
     ) as client:
         response = client.post(

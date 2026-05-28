@@ -10,9 +10,15 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from backend.core.config import Settings
 from backend.core.constants import REQUEST_ID_HEADER
 from backend.core.errors import AppError
+from backend.db.postgres import create_postgres_engine, create_sessionmaker
 from backend.db.redis import RedisClient
 from backend.schemas.chat_completion import ChatCompletionRequest
 from backend.services.auth.api_key_service import AuthContext, ensure_model_allowed
+from backend.repositories.request_audit_repository import RequestAuditRepository
+from backend.services.inference.request_lifecycle import (
+    build_audit_final,
+    build_audit_start,
+)
 from backend.services.inference.token_accounting import (
     HeuristicTokenEstimator,
     TokenEstimator,
@@ -23,6 +29,7 @@ from backend.services.inference.token_accounting import (
     usage_from_response,
     usage_from_stream_text,
 )
+from backend.services.inference.usage_finalizer import RequestAuditService
 from backend.services.rate_limit.admission import AdmissionLease, AdmissionService
 from backend.services.rate_limit.concurrency_limiter import ConcurrencyLimiter
 from backend.services.rate_limit.quota_reserver import QuotaReserver
@@ -37,6 +44,12 @@ from backend.services.vllm.stream import (
 )
 
 router = APIRouter(prefix="/v1", tags=["chat"])
+
+
+class RequestAuditController(Protocol):
+    async def start(self, audit: Any) -> str: ...
+
+    async def finalize(self, final: Any) -> None: ...
 
 
 class AdmissionController(Protocol):
@@ -82,13 +95,31 @@ async def create_chat_completion(
     )
     payload = normalize_chat_completion_payload(request_body)
     request_id = getattr(request.state, "request_id", None)
+    audit_service = _get_or_create_audit_service(request)
+    audit_record_id = await audit_service.start(
+        build_audit_start(
+            request_id=str(request_id or ""),
+            auth_context=auth_context,
+            model=request_body.model,
+            messages=request_body.messages,
+        )
+    )
+    audit_started_at = perf_counter()
     headers = {REQUEST_ID_HEADER: request_id} if request_id is not None else None
     client: ChatCompletionClient = request.app.state.vllm_client
 
     if request_body.stream:
         return StreamingResponse(
             _stream_response(
-                client, payload, request, admission_lease, token_plan, token_estimator
+                client,
+                payload,
+                request,
+                admission_lease,
+                token_plan,
+                token_estimator,
+                audit_service,
+                audit_record_id,
+                audit_started_at,
             ),
             media_type=SSE_MEDIA_TYPE,
             headers={**SSE_HEADERS, **(headers or {})},
@@ -99,17 +130,30 @@ async def create_chat_completion(
         usage = usage_from_response(response, token_plan, token_estimator)
         await admission_lease.finalize_tokens(actual_tokens=usage.total_tokens)
         _record_usage(request, usage)
+        await audit_service.finalize(
+            build_audit_final(
+                record_id=audit_record_id,
+                usage=usage,
+                latency_ms=_elapsed_ms(audit_started_at),
+            )
+        )
         return JSONResponse(content=response, headers=headers)
-    except Exception:
+    except Exception as exc:
         await admission_lease.finalize_tokens(actual_tokens=0, release_all=True)
-        _record_usage(
-            request,
-            UsageRecord(
-                prompt_tokens=token_plan.prompt_tokens,
-                completion_tokens=0,
-                total_tokens=0,
-                status="failed",
-            ),
+        failed_usage = UsageRecord(
+            prompt_tokens=token_plan.prompt_tokens,
+            completion_tokens=0,
+            total_tokens=0,
+            status="failed",
+        )
+        _record_usage(request, failed_usage)
+        await audit_service.finalize(
+            build_audit_final(
+                record_id=audit_record_id,
+                usage=failed_usage,
+                latency_ms=_elapsed_ms(audit_started_at),
+                error_code=getattr(exc, "code", "internal_server_error"),
+            )
         )
         raise
     finally:
@@ -123,6 +167,9 @@ async def _stream_response(
     admission_lease: AdmissionLease | None = None,
     token_plan: TokenPlan | None = None,
     token_estimator: TokenEstimator | None = None,
+    audit_service: RequestAuditController | None = None,
+    audit_record_id: str | None = None,
+    audit_started_at: float | None = None,
 ) -> AsyncIterator[str]:
     started_at = perf_counter()
     first_token_seen = False
@@ -131,6 +178,7 @@ async def _stream_response(
     event_stream = ensure_done_event(heartbeat_stream)
     completion_text = ""
     status = "completed"
+    error_code: str | None = None
     try:
         async for event in event_stream:
             if await request.is_disconnected():
@@ -143,8 +191,9 @@ async def _stream_response(
                 request.app.state.last_stream_ttft_ms = ttft_ms
                 first_token_seen = True
             yield event
-    except Exception:
+    except Exception as exc:
         status = "failed"
+        error_code = getattr(exc, "code", "internal_server_error")
         raise
     finally:
         await _close_async_iterator(event_stream)
@@ -162,6 +211,15 @@ async def _stream_response(
                 release_all=status == "failed",
             )
             _record_usage(request, usage)
+            if audit_service is not None and audit_record_id is not None:
+                await audit_service.finalize(
+                    build_audit_final(
+                        record_id=audit_record_id,
+                        usage=usage,
+                        latency_ms=_elapsed_ms(audit_started_at),
+                        error_code=error_code,
+                    )
+                )
         if admission_lease is not None:
             await admission_lease.release()
 
@@ -208,3 +266,27 @@ def _record_usage(request: Request, usage: UsageRecord) -> None:
         usage_records = []
         request.app.state.usage_records = usage_records
     usage_records.append(usage)
+
+
+def _get_or_create_audit_service(request: Request) -> RequestAuditController:
+    audit_service = getattr(request.app.state, "audit_service", None)
+    if audit_service is not None:
+        return audit_service
+
+    settings: Settings = request.app.state.settings
+    engine = getattr(request.app.state, "postgres_engine", None)
+    if engine is None:
+        engine = create_postgres_engine(settings.database_url)
+        request.app.state.postgres_engine = engine
+    audit_service = RequestAuditService(
+        RequestAuditRepository,
+        create_sessionmaker(engine),
+    )
+    request.app.state.audit_service = audit_service
+    return audit_service
+
+
+def _elapsed_ms(started_at: float | None) -> int | None:
+    if started_at is None:
+        return None
+    return int((perf_counter() - started_at) * 1000)
