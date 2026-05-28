@@ -4,7 +4,7 @@
 Assumption: you have **one Vast AI host with 4 GPUs**, connected through **Cloudflare Tunnel**, serving:
 
 ```text
-https://nsfw-model.ansuman.yral.com
+https://model.ansuman.yral.com
 ```
 
 You want to run one large model across the 4 GPUs as **one logical inference worker**.
@@ -49,8 +49,15 @@ The GPU server should not run ClickHouse locally.
 Use the existing external Postgres server:
 
 ```text
-postgress.ansuman.yral.com
+private Tailscale HAProxy route:
+100.78.17.101:15432  # ansuman-1 HAProxy
+100.79.99.107:15432  # ansuman-2 HAProxy
 ```
+
+Use the multi-host SQLAlchemy asyncpg DSN documented in
+`docs/postgres-connectivity.md`. Do not use `postgres.ansuman.yral.com` or
+`postgress.ansuman.yral.com` for the app DATABASE_URL unless a deliberate
+Postgres TCP DNS route is created and tested later.
 
 Create a dedicated Postgres user for the GPU inference service.
 
@@ -103,9 +110,13 @@ Cloudflare Tunnel should expose only the public inference API.
 
 Internal/private routes should stay on Tailscale.
 
-## 0.4 Prometheus/Grafana prerequisite
+## 0.4 Prometheus/Grafana prerequisite (deferred)
 
-Host Prometheus and Grafana on one of the existing servers first.
+Do this later, after the backend implementation and Vast runtime path are stable.
+It is not required for the current Vast bootstrap.
+
+Host Prometheus and Grafana on one of the existing servers when observability
+work resumes.
 
 Recommended MVP:
 
@@ -206,12 +217,11 @@ Before deploying the actual GPU inference server, confirm:
 ```text
 ClickHouse user exists and connection works
 Postgres user exists and connection works
-Sentry project exists and test event works
-Prometheus/Grafana server is running
-Tailscale connectivity works between observability server and GPU container
-metrics ports are private
-public Cloudflare route exposes only FastAPI public API
+Sentry project and DSN exist
+Tailscale connectivity works between GPU container and ansuman servers
+public Cloudflare route exposes only FastAPI public API when the app is ready
 secrets are ready as environment variables
+Prometheus/Grafana is explicitly deferred
 ```
 
 ---
@@ -224,9 +234,10 @@ Your updated implementation order should be:
 1. Prepare ClickHouse user and test ClickHouse connection.
 2. Prepare Postgres user and test Postgres connection.
 3. Set up Tailscale network between GPU container and your servers.
-4. Set up Prometheus/Grafana on ansuman-1 first.
-5. Add Sentry project for gpu-inference-server.
-6. Only then deploy the Vast GPU container with vLLM + FastAPI + cloudflared + exporters.
+4. Add Sentry project and DSN for gpu-inference-server.
+5. Finish the backend implementation locally.
+6. Deploy the Vast GPU container with vLLM + FastAPI + cloudflared when the code is ready.
+7. Set up Prometheus/Grafana later.
 ```
 
 This is a better plan than deploying the GPU server first and then discovering that metrics, database access, Sentry, or analytics are not reachable.
@@ -240,7 +251,7 @@ This is a better plan than deploying the GPU server first and then discovering t
 ```text
 Client / App
   ↓
-https://nsfw-model.ansuman.yral.com
+https://model.ansuman.yral.com
   ↓
 Cloudflare Tunnel
   ↓
@@ -364,7 +375,7 @@ event logging
 Your public endpoint:
 
 ```text
-https://nsfw-model.ansuman.yral.com
+https://model.ansuman.yral.com
 ```
 
 should point to Cloudflare Tunnel.
@@ -2942,7 +2953,8 @@ ClickHouse must not be used for API key validation, quota correctness, batch job
 
 Postgres already exists externally at:
 
-`postgress.ansuman.yral.com`
+`100.78.17.101:15432` and `100.79.99.107:15432` through the private Tailscale
+HAProxy route documented in `docs/postgres-connectivity.md`.
 
 The coding agent must not install or run Postgres on the GPU container.
 
