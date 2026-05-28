@@ -4,6 +4,7 @@ from typing import Any, cast
 
 from backend.core.errors import AppError
 from backend.db.redis import RedisLike
+from backend.services.observability.metrics import record_redis_failure
 
 RPM_WINDOW_SECONDS = 60
 
@@ -56,6 +57,7 @@ async def _redis_call(awaitable: Any) -> Any:
     except AppError:
         raise
     except Exception as exc:
+        record_redis_failure()
         raise AppError(
             message="Redis dependency is unavailable",
             code="dependency_unavailable",

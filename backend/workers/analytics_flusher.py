@@ -4,12 +4,14 @@ import asyncio
 
 from backend.core.config import get_settings
 from backend.db.clickhouse import ClickHouseClient
+from backend.services.observability.sentry import capture_exception, initialize_sentry
 from backend.services.analytics.clickhouse_flusher import ClickHouseFlusher
 from backend.services.analytics.event_collector import AnalyticsCollector
 
 
 async def main() -> None:
     settings = get_settings()
+    initialize_sentry(settings)
     collector = AnalyticsCollector(max_size=settings.analytics_queue_size)
     client = ClickHouseClient.from_settings(
         url=settings.clickhouse_url,
@@ -28,4 +30,8 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as exc:
+        capture_exception(exc, tags={"component": "analytics_flusher"})
+        raise

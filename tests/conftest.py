@@ -1,8 +1,23 @@
 """Pytest configuration."""
 
+import pytest
+
+from backend.core.config import get_settings
 from backend.services.auth.api_key_service import AuthContext, StaticApiKeyAuthService
 from backend.services.inference.usage_finalizer import InMemoryRequestAuditService
+from backend.services.observability import sentry
 from backend.services.rate_limit.admission import NoopAdmissionService
+
+
+@pytest.fixture(autouse=True)
+def disable_sentry_dsn_for_tests(monkeypatch):
+    monkeypatch.setenv("SENTRY_DSN", "")
+    monkeypatch.setattr(sentry, "_sentry_enabled", False)
+    get_settings.cache_clear()
+    yield
+    monkeypatch.setattr(sentry, "_sentry_enabled", False)
+    get_settings.cache_clear()
+
 
 TEST_API_KEY = "an_test_valid"
 
@@ -31,6 +46,7 @@ class FakeRedis:
     def __init__(self, *, fail: bool = False) -> None:
         self.values: dict[str, int | str] = {}
         self.expirations: dict[str, int] = {}
+        self.lists: dict[str, list[str]] = {}
         self.fail = fail
 
     def _maybe_fail(self) -> None:
@@ -88,7 +104,29 @@ class FakeRedis:
             if name in self.values:
                 deleted += 1
                 del self.values[name]
+            if name in self.lists:
+                deleted += 1
+                del self.lists[name]
         return deleted
+
+    async def rpush(self, name: str, value: str) -> int:
+        self._maybe_fail()
+        values = self.lists.setdefault(name, [])
+        values.append(value)
+        return len(values)
+
+    async def lpop(self, name: str) -> object | None:
+        self._maybe_fail()
+        values = self.lists.get(name, [])
+        if not values:
+            return None
+        return values.pop(0)
+
+    async def lrange(self, name: str, start: int, end: int) -> list[object]:
+        self._maybe_fail()
+        values = self.lists.get(name, [])
+        stop = None if end == -1 else end + 1
+        return list(values[start:stop])
 
     async def aclose(self) -> None:
         return None

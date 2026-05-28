@@ -83,7 +83,9 @@ def _get_or_create_auth_service(app_state: Any) -> AuthService:
 
 def _app_error_response(request: Request, exc: AppError) -> JSONResponse:
     request_id = getattr(request.state, "request_id", None)
-    headers = {REQUEST_ID_HEADER: request_id} if request_id is not None else None
+    headers = {"x-error-code": exc.code}
+    if request_id is not None:
+        headers[REQUEST_ID_HEADER] = request_id
     return JSONResponse(
         status_code=exc.status_code,
         content=openai_error_object(

@@ -85,6 +85,7 @@ make test
 make migrate
 make run-api
 make run-worker
+make run-recovery
 make run-flusher
 make run-vllm
 make run-redis
@@ -169,9 +170,9 @@ dedicated user can access only required tables
 * [x] Create Sentry project.
 * [x] Get DSN.
 * [x] Save DSN in local ignored `.env`.
-* [ ] Wire `sentry-sdk` initialization into FastAPI startup/config.
+* [x] Wire `sentry-sdk` initialization into FastAPI startup/config.
 * [ ] Confirm test exception appears.
-* [ ] Confirm payload scrubbing.
+* [x] Confirm payload scrubbing.
 
 Done when:
 
@@ -184,11 +185,11 @@ test exception appears with environment, release, and request_id
 Do later. This is intentionally not part of the immediate Vast bootstrap.
 
 * [ ] Run Prometheus/Grafana on `ansuman-1`.
-* [ ] Prepare scrape config for FastAPI metrics.
+* [x] Prepare scrape config for FastAPI metrics.
 * [ ] Prepare scrape config for vLLM metrics.
 * [ ] Prepare scrape config for DCGM Exporter.
 * [ ] Ensure scrape happens over private network/Tailscale.
-* [ ] Do not expose `/metrics` publicly.
+* [x] Do not expose `/metrics` publicly.
 
 Done when:
 
@@ -636,22 +637,46 @@ Analytics are asynchronous, batched, and safe under ClickHouse failure.
 
 ## 11.1 Sentry setup
 
-* [ ] Initialize Sentry only when DSN exists.
-* [ ] Add environment and release tags.
-* [ ] Add request ID, user ID, project ID, API key ID, model, endpoint, stream flag.
-* [ ] Scrub API keys, auth headers, prompts, DB credentials, tunnel tokens.
-* [ ] Capture unhandled exceptions.
-* [ ] Capture background worker failures.
-* [ ] Capture ClickHouse flusher failures after retry threshold.
-* [ ] Capture vLLM timeout/parsing failures.
-* [ ] Do not capture normal 400/401/429 noise.
+* [x] Initialize Sentry only when DSN exists.
+* [x] Add environment and release tags.
+* [x] Add request ID, user ID, project ID, API key ID, model, endpoint, stream flag.
+* [x] Scrub API keys, auth headers, prompts, DB credentials, tunnel tokens.
+* [x] Capture unhandled exceptions.
+* [x] Capture background worker failures.
+* [x] Capture ClickHouse flusher failures after retry threshold.
+* [x] Capture vLLM timeout/parsing failures.
+* [x] Do not capture normal 400/401/429 noise.
 
 Minimal tests:
 
-* [ ] Unit: Sentry scrubber removes secrets.
-* [ ] Unit: expected 401/429 are not captured.
-* [ ] Integration: forced exception is captured in test transport.
-* [ ] Integration: Sentry unavailable does not break request.
+* [x] Unit: Sentry scrubber removes secrets.
+* [x] Unit: expected 401/429 are not captured.
+* [x] Integration: forced exception is captured in test transport.
+* [x] Integration: Sentry unavailable does not break request.
+
+Implementation notes for future sessions:
+
+```text
+Sentry lives in backend/services/observability/sentry.py. It no-ops unless
+initialize_sentry(...) succeeds with a configured SENTRY_DSN, and capture calls are
+wrapped so Sentry outage/capture failure cannot change API behavior.
+
+Request exception capture is idempotent per request via
+request.state.sentry_exception_captured. Route-level capture preserves model/stream
+tags for vLLM failures; the global error handler covers unhandled/server errors.
+
+The scrubber redacts auth headers, raw `an_...`/`sk-...` keys, prompt/message/input
+payload fields, DB URL credentials, passwords/secrets/tokens, and tunnel tokens.
+It intentionally preserves api_key_id because that is a safe identifier needed for
+debugging.
+
+Tests force SENTRY_DSN empty in tests/conftest.py so a developer's local ignored
+.env cannot accidentally send test failures to the real self-hosted Sentry. Tests
+that need Sentry use injected Settings plus a fake SDK.
+
+backend/workers/batch_worker.py has Phase 11 process-level Sentry wrapping;
+Phase 13 now adds the actual batch worker loop on top of it.
+```
 
 Done when:
 
@@ -665,22 +690,39 @@ Sentry helps debug failures but is never in the request-critical path.
 
 ## 12.1 FastAPI metrics
 
-* [ ] Add private `/metrics`.
-* [ ] Add request count.
-* [ ] Add latency histogram.
-* [ ] Add TTFT histogram.
-* [ ] Add active stream gauge.
-* [ ] Add 429/503 counters.
-* [ ] Add analytics queue size.
-* [ ] Add ClickHouse flush failure counter.
-* [ ] Add Redis failure counter.
-* [ ] Add vLLM upstream error counter.
+* [x] Add private `/metrics`.
+* [x] Add request count.
+* [x] Add latency histogram.
+* [x] Add TTFT histogram.
+* [x] Add active stream gauge.
+* [x] Add 429/503 counters.
+* [x] Add analytics queue size.
+* [x] Add ClickHouse flush failure counter.
+* [x] Add Redis failure counter.
+* [x] Add vLLM upstream error counter.
 
 Minimal tests:
 
-* [ ] Unit: metrics counters increment.
-* [ ] Integration: `/metrics` exposes expected metric names.
-* [ ] Integration: `/metrics` is not exposed through public Cloudflare route config.
+* [x] Unit: metrics counters increment.
+* [x] Integration: `/metrics` exposes expected metric names.
+* [x] Integration: `/metrics` is not exposed through public Cloudflare route config.
+
+Implementation notes for future sessions:
+
+```text
+Prometheus metrics live in backend/services/observability/metrics.py and use a
+dedicated CollectorRegistry. MetricsMiddleware records request count/latency and
+skips /metrics itself. Error responses include x-error-code so 429/503 counters
+can label the app error code.
+
+infra/cloudflared/config.yml.example explicitly blocks path: /metrics before the
+general public FastAPI route. Keep that rule ordering in the real Cloudflare
+Tunnel config; Cloudflare should expose only the OpenAI-compatible public API.
+
+The /metrics endpoint exposes the FastAPI process registry. If analytics_flusher
+or batch_worker run as separate processes, their process-local counters will need
+their own private metrics endpoint or another aggregation path to be scraped.
+```
 
 Done when:
 
@@ -694,38 +736,70 @@ Prometheus can observe app health without exposing metrics publicly.
 
 ## 13.1 Batch API
 
-* [ ] Add `POST /v1/batch/jobs`.
-* [ ] Add `GET /v1/batch/jobs/{id}`.
-* [ ] Add `POST /v1/batch/jobs/{id}/cancel`.
-* [ ] Store batch job in Postgres.
-* [ ] Enqueue job in Redis.
-* [ ] Return job ID immediately.
+* [x] Add `POST /v1/batch/jobs`.
+* [x] Add `GET /v1/batch/jobs/{id}`.
+* [x] Add `POST /v1/batch/jobs/{id}/cancel`.
+* [x] Store batch job in Postgres.
+* [x] Enqueue job in Redis.
+* [x] Return job ID immediately.
 
 ## 13.2 Worker
 
-* [ ] Worker pulls from Redis.
-* [ ] Worker checks Postgres source of truth.
-* [ ] Worker checks online load before sending to vLLM.
-* [ ] Worker uses the same internal inference lifecycle as online requests.
-* [ ] Worker records usage.
-* [ ] Worker writes audit record.
-* [ ] Worker emits ClickHouse analytics.
-* [ ] Worker updates job status.
+* [x] Worker pulls from Redis.
+* [x] Worker checks Postgres source of truth.
+* [x] Worker checks online load before sending to vLLM.
+* [x] Worker uses the same internal inference lifecycle as online requests.
+* [x] Worker records usage.
+* [x] Worker writes audit record.
+* [x] Worker emits ClickHouse analytics.
+* [x] Worker updates job status.
 
 ## 13.3 Recovery scanner
 
-* [ ] Periodically find queued/runnable Postgres jobs not present in Redis.
-* [ ] Re-enqueue safely.
-* [ ] Avoid duplicate execution through locks/status transitions.
+* [x] Periodically find queued/runnable Postgres jobs not present in Redis.
+* [x] Re-enqueue safely.
+* [x] Avoid duplicate execution through locks/status transitions.
 
 Minimal tests:
 
-* [ ] Unit: batch status transitions are valid.
-* [ ] Unit: worker does not run cancelled job.
-* [ ] Unit: recovery scanner re-enqueues stuck queued job.
-* [ ] Integration: submit job → worker processes → result stored.
-* [ ] Integration: Redis enqueue failure still leaves recoverable Postgres job.
-* [ ] Integration: batch path writes usage/audit/analytics like online path.
+* [x] Unit: batch status transitions are valid.
+* [x] Unit: worker does not run cancelled job.
+* [x] Unit: recovery scanner re-enqueues stuck queued job.
+* [x] Integration: submit job → worker processes → result stored.
+* [x] Integration: Redis enqueue failure still leaves recoverable Postgres job.
+* [x] Integration: batch path writes usage/audit/analytics like online path.
+
+Implementation notes for future sessions:
+
+```text
+Batch API routes are wired in backend/api/routes/batch_jobs.py and protected by
+the existing API-key middleware. The MVP accepts one non-streaming chat-completion
+payload per job; stream=true is rejected. It does not implement uploaded JSONL or
+multi-request batch files yet.
+
+The existing Phase 6 batch_jobs schema does not have dedicated input_payload or
+result_payload columns from docs/plan.md, so Phase 13 stores input_payload,
+result_payload, usage, and timestamps inside batch_jobs.metadata_json. Add a
+future migration with first-class columns if queryability or large payload storage
+matters.
+
+Worker execution is in backend/services/batch/batch_worker.py and uses the same
+service interfaces as online non-streaming requests: token planning, Redis
+admission/quota lease, request audit, vLLM client, usage finalization, analytics
+event emission, and Sentry capture. It is non-streaming only.
+
+The worker supports an injectable should_run_job hook for online-load policy. The
+default worker entrypoint currently relies on AdmissionService's Redis overload
+check; richer vLLM/GPU load checks remain Phase 19 capacity/overload work.
+
+Redis enqueue failure after Postgres job creation intentionally returns a queued
+job. backend/services/batch/recovery_scanner.py re-enqueues queued jobs missing
+from Redis. Use make run-recovery to run that scanner loop.
+
+Job terminal status is `succeeded`/`failed`/`cancelled` in the batch_jobs row and
+API response. If product API compatibility later needs `completed`, adjust the
+status vocabulary and tests together.
+```
 
 Done when:
 
