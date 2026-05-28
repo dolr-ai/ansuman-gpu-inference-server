@@ -575,38 +575,54 @@ Postgres has correctness-critical request history independent of ClickHouse.
 
 ## 10.1 ClickHouse schema
 
-* [ ] Create `inference_analytics` database.
-* [ ] Create `usage_events_local`.
-* [ ] Create `usage_events` distributed table.
-* [ ] Create `inference_events_local`.
-* [ ] Create `inference_events` distributed table.
+* [x] Create `inference_analytics` database.
+* [x] Create `usage_events_local`.
+* [x] Create `usage_events` distributed table.
+* [x] Create `inference_events_local`.
+* [x] Create `inference_events` distributed table.
 
 ## 10.2 Event collector
 
-* [ ] Add bounded in-memory queue.
-* [ ] Add event models.
-* [ ] Split critical and non-critical events.
-* [ ] Never block request path on ClickHouse.
-* [ ] Drop non-critical events when queue is full.
-* [ ] Keep critical events recoverable through Postgres/local spool.
+* [x] Add bounded in-memory queue.
+* [x] Add event models.
+* [x] Split critical and non-critical events.
+* [x] Never block request path on ClickHouse.
+* [x] Drop non-critical events when queue full.
+* [x] Keep critical events recoverable through Postgres/local spool.
 
 ## 10.3 Batch flusher
 
-* [ ] Flush every 1–5 seconds.
-* [ ] Flush when batch size threshold is reached.
-* [ ] Use batch inserts.
-* [ ] Add retry with exponential backoff.
-* [ ] Pause gracefully when ClickHouse is down.
-* [ ] Add shutdown drain.
+* [x] Flush every 1–5 seconds.
+* [x] Flush when batch size threshold is reached.
+* [x] Use batch inserts.
+* [x] Add retry with exponential backoff.
+* [x] Pause gracefully when ClickHouse is down.
+* [x] Add shutdown drain.
 
 Minimal tests:
 
-* [ ] Unit: event serialization matches ClickHouse schema.
-* [ ] Unit: non-critical event drops when queue full.
-* [ ] Unit: ClickHouse failure does not raise into request path.
-* [ ] Integration: successful request queues analytics event.
-* [ ] Integration: flusher writes batch to test ClickHouse or fake ClickHouse.
-* [ ] Integration: ClickHouse down does not break inference endpoint.
+* [x] Unit: event serialization matches ClickHouse schema.
+* [x] Unit: non-critical event drops when queue full.
+* [x] Unit: ClickHouse failure does not raise into request path.
+* [x] Integration: successful request queues analytics event.
+* [x] Integration: flusher writes batch to test ClickHouse or fake ClickHouse.
+* [x] Integration: ClickHouse down does not break inference endpoint.
+
+Implementation notes for future sessions:
+
+```text
+Request handling only calls AnalyticsCollector.collect(...) inside a swallow-errors
+helper. ClickHouse inserts happen in ClickHouseFlusher batches outside the request
+path.
+
+backend/scripts/create_clickhouse_tables.py owns the Phase 10 DDL. Set
+CLICKHOUSE_CLUSTER to the real ClickHouse cluster name before running it; the
+current default is `default` only as a local placeholder.
+
+Critical analytics events are spooled to local JSONL when the bounded queue is
+full. Request audit records in Postgres remain the correctness source for
+critical usage recovery.
+```
 
 Done when:
 

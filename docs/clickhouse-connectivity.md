@@ -66,3 +66,19 @@ CLICKHOUSE_VERIFY=false
 
 Run the same HTTPS SELECT check from the actual Vast instance after it joins
 Tailscale.
+
+
+## Phase 10 application note
+
+The backend now includes ClickHouse event models, a bounded in-memory analytics
+collector, local JSONL spool for critical events, and a batch flusher. The DDL
+entrypoint is:
+
+```bash
+make run-flusher  # worker process
+uv run --env-file .env python -m backend.scripts.create_clickhouse_tables
+```
+
+Set `CLICKHOUSE_CLUSTER` to the real cluster name before creating distributed
+tables. The ClickHouse user documented above currently has SELECT/INSERT only,
+so DDL may need to be run with an admin or migration role.
