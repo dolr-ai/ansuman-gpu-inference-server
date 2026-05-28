@@ -101,7 +101,12 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 
 
 def record_http_request(
-    *, method: str, path: str, status_code: int, elapsed_seconds: float, error_code: str | None = None
+    *,
+    method: str,
+    path: str,
+    status_code: int,
+    elapsed_seconds: float,
+    error_code: str | None = None,
 ) -> None:
     status = str(status_code)
     HTTP_REQUESTS_TOTAL.labels(method=method, path=path, status_code=status).inc()
