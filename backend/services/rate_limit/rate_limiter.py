@@ -1,5 +1,7 @@
 """Rate limiter service."""
 
+from typing import Any, cast
+
 from backend.core.errors import AppError
 from backend.db.redis import RedisLike
 
@@ -36,7 +38,7 @@ class RateLimiter:
 
     async def check_rpm(self, *, api_key_id: str, limit: int) -> None:
         key = rpm_key(api_key_id)
-        count = await _redis_call(self._redis.incr(key))
+        count = cast(int, await _redis_call(self._redis.incr(key)))
         if count == 1:
             await _redis_call(self._redis.expire(key, RPM_WINDOW_SECONDS))
         if count > limit:
@@ -48,9 +50,9 @@ class RateLimiter:
             )
 
 
-async def _redis_call(awaitable: object) -> object:
+async def _redis_call(awaitable: Any) -> Any:
     try:
-        return await awaitable  # type: ignore[misc]
+        return await awaitable
     except AppError:
         raise
     except Exception as exc:

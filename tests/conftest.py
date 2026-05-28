@@ -63,6 +63,18 @@ class FakeRedis:
         self.values[name] = value
         return value
 
+    async def incrby(self, name: str, amount: int) -> int:
+        self._maybe_fail()
+        value = int(self.values.get(name, 0)) + amount
+        self.values[name] = value
+        return value
+
+    async def decrby(self, name: str, amount: int) -> int:
+        self._maybe_fail()
+        value = int(self.values.get(name, 0)) - amount
+        self.values[name] = value
+        return value
+
     async def expire(self, name: str, time: int) -> object:
         self._maybe_fail()
         self.expirations[name] = time

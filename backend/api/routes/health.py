@@ -23,4 +23,15 @@ async def ready(request: Request) -> dict[str, str]:
             status_code=503,
             type="server_error",
         )
+    redis_client = getattr(request.app.state, "redis_client", None)
+    if redis_client is not None:
+        try:
+            await redis_client.ping()
+        except Exception as exc:
+            raise AppError(
+                message="Redis dependency is unavailable",
+                code="dependency_unavailable",
+                status_code=503,
+                type="server_error",
+            ) from exc
     return {"status": "ready"}

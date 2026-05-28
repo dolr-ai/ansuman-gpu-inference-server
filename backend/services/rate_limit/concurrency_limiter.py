@@ -2,6 +2,7 @@
 
 import logging
 from dataclasses import dataclass
+from typing import cast
 
 from backend.core.errors import AppError
 from backend.db.redis import RedisLike
@@ -42,7 +43,7 @@ class ConcurrencyLimiter:
 
     async def acquire(self, *, api_key_id: str, limit: int) -> ConcurrencyLease:
         key = concurrency_key(api_key_id)
-        count = await _redis_call(self._redis.incr(key))
+        count = cast(int, await _redis_call(self._redis.incr(key)))
         if count > limit:
             try:
                 await self._redis.decr(key)

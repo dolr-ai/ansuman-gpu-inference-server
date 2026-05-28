@@ -1,22 +1,30 @@
 """Request admission service backed by Redis."""
 
 from dataclasses import dataclass
+from typing import Protocol
 
 from backend.services.auth.api_key_service import AuthContext
-from backend.services.rate_limit.concurrency_limiter import ConcurrencyLease, ConcurrencyLimiter
-from backend.services.rate_limit.quota_reserver import QuotaReserver, TokenReservation
+from backend.services.rate_limit.concurrency_limiter import ConcurrencyLimiter
+from backend.services.rate_limit.quota_reserver import QuotaReserver, TokenReservationLike
 from backend.services.rate_limit.rate_limiter import RateLimiter
+
+
+class Releasable(Protocol):
+    async def release(self) -> None: ...
 
 
 @dataclass
 class AdmissionLease:
     """Admission state held until a request leaves the GPU path."""
 
-    concurrency: ConcurrencyLease
-    token_reservation: TokenReservation
+    concurrency: Releasable
+    token_reservation: TokenReservationLike
 
     async def release(self) -> None:
         await self.concurrency.release()
+
+    async def finalize_tokens(self, *, actual_tokens: int, release_all: bool = False) -> None:
+        await self.token_reservation.finalize(actual_tokens=actual_tokens, release_all=release_all)
 
 
 class AdmissionService:
@@ -48,7 +56,7 @@ class AdmissionService:
             api_key_id=auth_context.api_key_id,
             limit=self._concurrent_request_limit,
         )
-        token_reservation = await self._quota_reserver.reserve_tpm_placeholder(
+        token_reservation = await self._quota_reserver.reserve(
             api_key_id=auth_context.api_key_id,
             estimated_tokens=estimated_tokens,
         )
@@ -63,9 +71,8 @@ class NoopAdmissionService:
     ) -> AdmissionLease:
         return AdmissionLease(
             concurrency=_NoopConcurrencyLease(),
-            token_reservation=TokenReservation(
-                api_key_id=auth_context.api_key_id,
-                estimated_tokens=estimated_tokens,
+            token_reservation=await QuotaReserver().reserve(
+                api_key_id=auth_context.api_key_id, estimated_tokens=estimated_tokens
             ),
         )
 

@@ -53,3 +53,11 @@ model.ansuman.yral.com -> http://127.0.0.1:8000
 ```
 
 Postgres must use Tailscale TCP, not Cloudflare HTTP proxying.
+
+
+## Phase 7 runtime note
+
+The app now expects Redis on `127.0.0.1:6379` for request admission. The
+`infra/supervisord.conf` startup plan includes `redis-server --bind 127.0.0.1
+--port 6379 --save "" --appendonly no` before the API process. Redis remains
+local runtime state, not durable storage.

@@ -22,6 +22,7 @@ def create_app(
     vllm_client: Any | None = None,
     auth_service: Any | None = None,
     admission_service: Any | None = None,
+    token_estimator: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     resolved_settings = settings or get_settings()
@@ -43,6 +44,8 @@ def create_app(
         app_instance.state.auth_service = auth_service
     if admission_service is not None:
         app_instance.state.admission_service = admission_service
+    if token_estimator is not None:
+        app_instance.state.token_estimator = token_estimator
     app_instance.add_middleware(ApiKeyAuthMiddleware)
     app_instance.add_middleware(RequestIdMiddleware)
     install_error_handlers(app_instance)

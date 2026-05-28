@@ -439,29 +439,42 @@ No protected inference endpoint works without a valid Postgres-backed API key.
 
 ## 7.1 Redis setup
 
-* [ ] Add local Redis process to startup plan.
-* [ ] Add Redis config/env.
-* [ ] Add health check for Redis.
-* [ ] Add fail-closed behavior when Redis is unavailable.
-* [ ] Add Redis client wrapper.
+* [x] Add local Redis process to startup plan.
+* [x] Add Redis config/env.
+* [x] Add health check for Redis.
+* [x] Add fail-closed behavior when Redis is unavailable.
+* [x] Add Redis client wrapper.
 
 ## 7.2 Rate limits and concurrency
 
-* [ ] Add RPM limit per API key.
-* [ ] Add concurrent request limit per API key.
-* [ ] Add TPM reservation placeholder.
-* [ ] Add overload flag check.
-* [ ] Use atomic Redis operations/Lua where needed.
-* [ ] Ensure counters decrement in `finally`.
+* [x] Add RPM limit per API key.
+* [x] Add concurrent request limit per API key.
+* [x] Add TPM reservation placeholder.
+* [x] Add overload flag check.
+* [x] Use atomic Redis operations/Lua where needed.
+* [x] Ensure counters decrement in `finally`.
 
 Minimal tests:
 
-* [ ] Unit: rate limit key names are correct.
-* [ ] Unit: concurrency counter increments/decrements.
-* [ ] Unit: Redis unavailable maps to controlled `503 dependency_unavailable` or `503 server_overloaded`.
-* [ ] Integration: exceeding RPM returns `429`.
-* [ ] Integration: concurrent request limit returns `429`.
-* [ ] Integration: failed request does not leak concurrency counter.
+* [x] Unit: rate limit key names are correct.
+* [x] Unit: concurrency counter increments/decrements.
+* [x] Unit: Redis unavailable maps to controlled `503 dependency_unavailable` or `503 server_overloaded`.
+* [x] Integration: exceeding RPM returns `429`.
+* [x] Integration: concurrent request limit returns `429`.
+* [x] Integration: failed request does not leak concurrency counter.
+
+Implementation notes for future sessions:
+
+```text
+Redis admission is lazy-created on the first protected inference request unless
+an admission_service is injected by tests. /ready pings Redis only after the
+redis_client exists in app.state, so local health tests do not require Redis.
+
+The Phase 7 implementation uses Redis INCR/DECR/EXPIRE directly. If limits need
+strong multi-key atomicity later, replace the admission sequence with Lua without
+changing the route contract: admission_service.admit(...) returns a lease and the
+route releases it in finally/stream close.
+```
 
 Done when:
 
@@ -475,30 +488,44 @@ Redis protects GPU admission before any request reaches vLLM.
 
 ## 8.1 Token estimation
 
-* [ ] Use tokenizer compatible with the served vLLM model family.
-* [ ] Estimate prompt tokens before admission.
-* [ ] Enforce max input tokens.
-* [ ] Enforce max output tokens.
-* [ ] Enforce max total tokens.
+* [x] Use tokenizer compatible with the served vLLM model family.
+* [x] Estimate prompt tokens before admission.
+* [x] Enforce max input tokens.
+* [x] Enforce max output tokens.
+* [x] Enforce max total tokens.
 
 ## 8.2 Quota reservation/finalization
 
-* [ ] Reserve estimated tokens in Redis before forwarding.
-* [ ] Count completion tokens during/after generation.
-* [ ] Finalize actual usage.
-* [ ] Release unused reservation.
-* [ ] Handle failure.
-* [ ] Handle client disconnect.
-* [ ] Mark partial usage correctly.
+* [x] Reserve estimated tokens in Redis before forwarding.
+* [x] Count completion tokens during/after generation.
+* [x] Finalize actual usage.
+* [x] Release unused reservation.
+* [x] Handle failure.
+* [x] Handle client disconnect.
+* [x] Mark partial usage correctly.
 
 Minimal tests:
 
-* [ ] Unit: prompt token estimator is called before vLLM.
-* [ ] Unit: max token violation returns `400` or `413`.
-* [ ] Unit: quota reservation finalizes correctly on success.
-* [ ] Unit: quota reservation finalizes correctly on failure.
-* [ ] Integration: completed request writes correct usage.
-* [ ] Integration: disconnected streaming request writes `client_disconnected`/partial usage.
+* [x] Unit: prompt token estimator is called before vLLM.
+* [x] Unit: max token violation returns `400` or `413`.
+* [x] Unit: quota reservation finalizes correctly on success.
+* [x] Unit: quota reservation finalizes correctly on failure.
+* [x] Integration: completed request writes correct usage.
+* [x] Integration: disconnected streaming request writes `client_disconnected`/partial usage.
+
+Implementation notes for future sessions:
+
+```text
+The token path uses a TokenEstimator interface and a conservative default
+HeuristicTokenEstimator. Swap app.state.token_estimator for the exact served
+model tokenizer when the final vLLM model is pinned; the route and quota
+reservation contracts already pass through the estimator abstraction.
+
+Redis TPM reservation stores estimated total tokens in rl:api_key:{id}:tpm before
+vLLM and releases unused tokens on success, failure, and stream close. Usage is
+currently recorded in request.state.usage/app.state.usage_records; Phase 9 should
+persist the same UsageRecord into Postgres audit rows.
+```
 
 Done when:
 
