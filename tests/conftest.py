@@ -46,6 +46,7 @@ class FakeRedis:
     def __init__(self, *, fail: bool = False) -> None:
         self.values: dict[str, int | str] = {}
         self.expirations: dict[str, int] = {}
+        self.lists: dict[str, list[str]] = {}
         self.fail = fail
 
     def _maybe_fail(self) -> None:
@@ -103,7 +104,29 @@ class FakeRedis:
             if name in self.values:
                 deleted += 1
                 del self.values[name]
+            if name in self.lists:
+                deleted += 1
+                del self.lists[name]
         return deleted
+
+    async def rpush(self, name: str, value: str) -> int:
+        self._maybe_fail()
+        values = self.lists.setdefault(name, [])
+        values.append(value)
+        return len(values)
+
+    async def lpop(self, name: str) -> object | None:
+        self._maybe_fail()
+        values = self.lists.get(name, [])
+        if not values:
+            return None
+        return values.pop(0)
+
+    async def lrange(self, name: str, start: int, end: int) -> list[object]:
+        self._maybe_fail()
+        values = self.lists.get(name, [])
+        stop = None if end == -1 else end + 1
+        return list(values[start:stop])
 
     async def aclose(self) -> None:
         return None

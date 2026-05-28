@@ -26,6 +26,12 @@ class RedisLike(Protocol):
 
     async def delete(self, *names: str) -> int: ...
 
+    async def rpush(self, name: str, value: str) -> int: ...
+
+    async def lpop(self, name: str) -> object | None: ...
+
+    async def lrange(self, name: str, start: int, end: int) -> list[object]: ...
+
     async def aclose(self) -> None: ...
 
 
@@ -66,6 +72,15 @@ class RedisClient:
 
     async def delete(self, *names: str) -> int:
         return int(await self._redis.delete(*names))
+
+    async def rpush(self, name: str, value: str) -> int:
+        return int(await self._redis.rpush(name, value))
+
+    async def lpop(self, name: str) -> object | None:
+        return await self._redis.lpop(name)
+
+    async def lrange(self, name: str, start: int, end: int) -> list[object]:
+        return list(await self._redis.lrange(name, start, end))
 
     async def aclose(self) -> None:
         await self._redis.aclose()
