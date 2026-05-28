@@ -24,6 +24,7 @@ def create_app(
     admission_service: Any | None = None,
     token_estimator: Any | None = None,
     audit_service: Any | None = None,
+    analytics_collector: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     resolved_settings = settings or get_settings()
@@ -49,6 +50,8 @@ def create_app(
         app_instance.state.token_estimator = token_estimator
     if audit_service is not None:
         app_instance.state.audit_service = audit_service
+    if analytics_collector is not None:
+        app_instance.state.analytics_collector = analytics_collector
     app_instance.add_middleware(ApiKeyAuthMiddleware)
     app_instance.add_middleware(RequestIdMiddleware)
     install_error_handlers(app_instance)

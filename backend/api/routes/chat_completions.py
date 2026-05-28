@@ -10,6 +10,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from backend.core.config import Settings
 from backend.core.constants import REQUEST_ID_HEADER
 from backend.core.errors import AppError
+from backend.services.analytics.event_collector import AnalyticsCollector
+from backend.services.analytics.event_models import UsageEvent
 from backend.db.postgres import create_postgres_engine, create_sessionmaker
 from backend.db.redis import RedisClient
 from backend.schemas.chat_completion import ChatCompletionRequest
@@ -35,6 +37,7 @@ from backend.services.rate_limit.concurrency_limiter import ConcurrencyLimiter
 from backend.services.rate_limit.quota_reserver import QuotaReserver
 from backend.services.rate_limit.rate_limiter import RateLimiter
 from backend.services.vllm.payload_mapper import normalize_chat_completion_payload
+from backend.utils.time import utc_now
 from backend.services.vllm.stream import (
     DONE_LINE,
     SSE_HEADERS,
@@ -44,6 +47,10 @@ from backend.services.vllm.stream import (
 )
 
 router = APIRouter(prefix="/v1", tags=["chat"])
+
+
+class AnalyticsCollectorController(Protocol):
+    def collect(self, event: Any) -> bool: ...
 
 
 class RequestAuditController(Protocol):
@@ -120,6 +127,9 @@ async def create_chat_completion(
                 audit_service,
                 audit_record_id,
                 audit_started_at,
+                auth_context,
+                str(request_id or ""),
+                request_body.model,
             ),
             media_type=SSE_MEDIA_TYPE,
             headers={**SSE_HEADERS, **(headers or {})},
@@ -130,12 +140,22 @@ async def create_chat_completion(
         usage = usage_from_response(response, token_plan, token_estimator)
         await admission_lease.finalize_tokens(actual_tokens=usage.total_tokens)
         _record_usage(request, usage)
+        latency_ms = _elapsed_ms(audit_started_at)
         await audit_service.finalize(
             build_audit_final(
                 record_id=audit_record_id,
                 usage=usage,
-                latency_ms=_elapsed_ms(audit_started_at),
+                latency_ms=latency_ms,
             )
+        )
+        _emit_usage_analytics(
+            request,
+            auth_context=auth_context,
+            request_id=str(request_id or ""),
+            model=request_body.model,
+            usage=usage,
+            latency_ms=latency_ms,
+            error_code=None,
         )
         return JSONResponse(content=response, headers=headers)
     except Exception as exc:
@@ -147,13 +167,24 @@ async def create_chat_completion(
             status="failed",
         )
         _record_usage(request, failed_usage)
+        latency_ms = _elapsed_ms(audit_started_at)
+        error_code = getattr(exc, "code", "internal_server_error")
         await audit_service.finalize(
             build_audit_final(
                 record_id=audit_record_id,
                 usage=failed_usage,
-                latency_ms=_elapsed_ms(audit_started_at),
-                error_code=getattr(exc, "code", "internal_server_error"),
+                latency_ms=latency_ms,
+                error_code=error_code,
             )
+        )
+        _emit_usage_analytics(
+            request,
+            auth_context=auth_context,
+            request_id=str(request_id or ""),
+            model=request_body.model,
+            usage=failed_usage,
+            latency_ms=latency_ms,
+            error_code=error_code,
         )
         raise
     finally:
@@ -170,6 +201,9 @@ async def _stream_response(
     audit_service: RequestAuditController | None = None,
     audit_record_id: str | None = None,
     audit_started_at: float | None = None,
+    auth_context: AuthContext | None = None,
+    request_id: str | None = None,
+    model: str | None = None,
 ) -> AsyncIterator[str]:
     started_at = perf_counter()
     first_token_seen = False
@@ -212,14 +246,25 @@ async def _stream_response(
             )
             _record_usage(request, usage)
             if audit_service is not None and audit_record_id is not None:
+                latency_ms = _elapsed_ms(audit_started_at)
                 await audit_service.finalize(
                     build_audit_final(
                         record_id=audit_record_id,
                         usage=usage,
-                        latency_ms=_elapsed_ms(audit_started_at),
+                        latency_ms=latency_ms,
                         error_code=error_code,
                     )
                 )
+                if auth_context is not None and request_id is not None and model is not None:
+                    _emit_usage_analytics(
+                        request,
+                        auth_context=auth_context,
+                        request_id=request_id,
+                        model=model,
+                        usage=usage,
+                        latency_ms=latency_ms,
+                        error_code=error_code,
+                    )
         if admission_lease is not None:
             await admission_lease.release()
 
@@ -290,3 +335,47 @@ def _elapsed_ms(started_at: float | None) -> int | None:
     if started_at is None:
         return None
     return int((perf_counter() - started_at) * 1000)
+
+
+def _get_or_create_analytics_collector(request: Request) -> AnalyticsCollectorController:
+    collector = getattr(request.app.state, "analytics_collector", None)
+    if collector is not None:
+        return collector
+    settings: Settings = request.app.state.settings
+    collector = AnalyticsCollector(max_size=settings.analytics_queue_size)
+    request.app.state.analytics_collector = collector
+    return collector
+
+
+def _emit_usage_analytics(
+    request: Request,
+    *,
+    auth_context: AuthContext,
+    request_id: str,
+    model: str,
+    usage: UsageRecord,
+    latency_ms: int | None,
+    error_code: str | None,
+) -> None:
+    try:
+        collector = _get_or_create_analytics_collector(request)
+        collector.collect(
+            UsageEvent(
+                event_time=utc_now(),
+                request_id=request_id,
+                user_id=auth_context.user_id,
+                project_id=auth_context.project_id,
+                api_key_id=auth_context.api_key_id,
+                model=model,
+                status=usage.status,
+                prompt_tokens=usage.prompt_tokens,
+                completion_tokens=usage.completion_tokens,
+                total_tokens=usage.total_tokens,
+                latency_ms=latency_ms,
+                error_code=error_code,
+                critical=False,
+            )
+        )
+    except Exception:
+        # Analytics must never raise into the request path.
+        return

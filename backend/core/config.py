@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     clickhouse_password: str = Field(default="", alias="CLICKHOUSE_PASSWORD")
     clickhouse_secure: bool = Field(default=False, alias="CLICKHOUSE_SECURE")
     clickhouse_verify: bool = Field(default=True, alias="CLICKHOUSE_VERIFY")
+    clickhouse_cluster: str = Field(default="default", alias="CLICKHOUSE_CLUSTER")
     analytics_queue_size: int = Field(default=1000, alias="ANALYTICS_QUEUE_SIZE")
     analytics_flush_batch_size: int = Field(default=500, alias="ANALYTICS_FLUSH_BATCH_SIZE")
     vllm_base_url: str = Field(default="http://localhost:8001", alias="VLLM_BASE_URL")
