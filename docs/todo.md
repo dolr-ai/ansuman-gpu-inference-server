@@ -153,8 +153,8 @@ user is not overprivileged
 * [x] Confirm network/firewall/Tailscale access from current tailnet machine.
 * [ ] Install and join Tailscale on the Vast instance.
 * [x] Store SQLAlchemy asyncpg multi-host DSN with both HAProxy listener IPs in local ignored `.env`.
-* [ ] Add `asyncpg` runtime dependency with the SQLAlchemy DB layer.
-* [ ] Tighten SQLAlchemy lower bound to `>=2.0.18` when DB code lands.
+* [x] Add `asyncpg` runtime dependency with the SQLAlchemy DB layer.
+* [x] Tighten SQLAlchemy lower bound to `>=2.0.18` when DB code lands.
 * [x] Save credentials as environment variables in local ignored `.env`.
 
 Done when:
@@ -202,9 +202,9 @@ Prometheus can scrape private GPU container metrics over Tailscale
 
 ## 1.1 Create Python project
 
-* [ ] Initialize project with `uv`.
-* [ ] Add FastAPI, Uvicorn, Pydantic Settings, httpx, asyncpg/SQLAlchemy, redis, clickhouse-connect, pytest, pytest-asyncio, ruff, mypy, sentry-sdk, prometheus-client.
-* [ ] Create clean app structure:
+* [x] Initialize project with `uv`.
+* [x] Add FastAPI, Uvicorn, Pydantic Settings, httpx, asyncpg/SQLAlchemy, redis, clickhouse-connect, pytest, pytest-asyncio, ruff, mypy, sentry-sdk, prometheus-client.
+* [x] Create clean app structure:
 
 ```text
 app/
@@ -234,15 +234,15 @@ app/
     integration/
 ```
 
-* [ ] Add `.env.example`.
-* [ ] Add `Makefile`.
-* [ ] Add `pyproject.toml`.
+* [x] Add `.env.example`.
+* [x] Add `Makefile`.
+* [x] Add `pyproject.toml`.
 
 Minimal tests:
 
-* [ ] Unit: settings load from env.
-* [ ] Unit: app imports successfully.
-* [ ] Integration: `GET /health` returns 200.
+* [x] Unit: settings load from env.
+* [x] Unit: app imports successfully.
+* [x] Integration: `GET /health` returns 200.
 
 Validation:
 
@@ -265,19 +265,19 @@ Project boots using uv and Makefile only.
 
 ## 2.1 App lifecycle and health
 
-* [ ] Add FastAPI app factory.
-* [ ] Add startup/shutdown hooks.
-* [ ] Add `/health`.
-* [ ] Add `/ready`.
-* [ ] Add structured JSON logging.
-* [ ] Add request ID middleware.
-* [ ] Add global error response format.
+* [x] Add FastAPI app factory.
+* [x] Add startup/shutdown hooks.
+* [x] Add `/health`.
+* [x] Add `/ready`.
+* [x] Add structured JSON logging.
+* [x] Add request ID middleware.
+* [x] Add global error response format.
 
 Minimal tests:
 
-* [ ] Unit: request ID generator returns unique IDs.
-* [ ] Unit: error formatter returns OpenAI-style error object.
-* [ ] Integration: `/health` and `/ready` work.
+* [x] Unit: request ID generator returns unique IDs.
+* [x] Unit: error formatter returns OpenAI-style error object.
+* [x] Integration: `/health` and `/ready` work.
 
 Done when:
 
@@ -293,19 +293,19 @@ Do not connect real vLLM first. Build the contract against a fake local vLLM ser
 
 ## 3.1 vLLM client abstraction
 
-* [ ] Create `VLLMClient`.
-* [ ] Add non-streaming completion method.
-* [ ] Add streaming completion method.
-* [ ] Add timeout handling.
-* [ ] Add upstream error mapping.
-* [ ] Add cancellation support for streaming disconnects.
+* [x] Create `VLLMClient`.
+* [x] Add non-streaming completion method.
+* [x] Add streaming completion method.
+* [x] Add timeout handling.
+* [x] Add upstream error mapping.
+* [x] Add cancellation support for streaming disconnects.
 
 Minimal tests:
 
-* [ ] Unit: request payload is forwarded correctly.
-* [ ] Unit: upstream timeout maps to `504 upstream_timeout`.
-* [ ] Unit: upstream 500 maps to `502 upstream_error`.
-* [ ] Integration: fake vLLM returns a non-streaming response through adapter.
+* [x] Unit: request payload is forwarded correctly.
+* [x] Unit: upstream timeout maps to `504 upstream_timeout`.
+* [x] Unit: upstream 500 maps to `502 upstream_error`.
+* [x] Integration: fake vLLM returns a non-streaming response through adapter.
 
 Done when:
 
@@ -319,27 +319,27 @@ FastAPI can talk to fake vLLM through the same interface real vLLM will use.
 
 ## 4.1 `/v1/models`
 
-* [ ] Return configured model list.
-* [ ] Keep response OpenAI-compatible.
+* [x] Return configured model list.
+* [x] Keep response OpenAI-compatible.
 
 Minimal tests:
 
-* [ ] Unit: model config maps to response shape.
-* [ ] Integration: `GET /v1/models` returns expected model ID.
+* [x] Unit: model config maps to response shape.
+* [x] Integration: `GET /v1/models` returns expected model ID.
 
 ## 4.2 `/v1/chat/completions` non-streaming
 
-* [ ] Accept OpenAI-style chat completion payload.
-* [ ] Validate required fields.
-* [ ] Forward request to vLLM adapter.
-* [ ] Return OpenAI-compatible response.
-* [ ] Add `x-request-id`.
+* [x] Accept OpenAI-style chat completion payload.
+* [x] Validate required fields.
+* [x] Forward request to vLLM adapter.
+* [x] Return OpenAI-compatible response.
+* [x] Add `x-request-id`.
 
 Minimal tests:
 
-* [ ] Unit: invalid payload returns `400 bad_request`.
-* [ ] Unit: valid payload creates normalized internal request.
-* [ ] Integration: fake vLLM response returns through `/v1/chat/completions`.
+* [x] Unit: invalid payload returns `400 bad_request`.
+* [x] Unit: valid payload creates normalized internal request.
+* [x] Integration: fake vLLM response returns through `/v1/chat/completions`.
 
 Done when:
 
@@ -353,22 +353,22 @@ OpenAI client can call non-streaming endpoint against fake vLLM.
 
 ## 5.1 Streaming endpoint
 
-* [ ] Support `stream=true`.
-* [ ] Return `Content-Type: text/event-stream`.
-* [ ] Add `Cache-Control: no-cache, no-transform`.
-* [ ] Forward chunks immediately.
-* [ ] Send final `data: [DONE]`.
-* [ ] Track first-token time.
-* [ ] Add heartbeat support.
-* [ ] Detect client disconnect.
-* [ ] Cancel upstream generation on disconnect.
+* [x] Support `stream=true`.
+* [x] Return `Content-Type: text/event-stream`.
+* [x] Add `Cache-Control: no-cache, no-transform`.
+* [x] Forward chunks immediately.
+* [x] Send final `data: [DONE]`.
+* [x] Track first-token time.
+* [x] Add heartbeat support.
+* [x] Detect client disconnect.
+* [x] Cancel upstream generation on disconnect.
 
 Minimal tests:
 
-* [ ] Unit: SSE chunk formatter is correct.
-* [ ] Unit: heartbeat event is valid.
-* [ ] Integration: fake streaming vLLM returns chunks through FastAPI.
-* [ ] Integration: disconnect cleanup path runs without leaking request state.
+* [x] Unit: SSE chunk formatter is correct.
+* [x] Unit: heartbeat event is valid.
+* [x] Integration: fake streaming vLLM returns chunks through FastAPI.
+* [x] Integration: disconnect cleanup path runs without leaking request state.
 
 Done when:
 
@@ -382,34 +382,50 @@ Streaming works through FastAPI with correct SSE headers.
 
 ## 6.1 Migrations
 
-* [ ] Add migration framework.
-* [ ] Create `users`.
-* [ ] Create `projects`.
-* [ ] Create `api_keys`.
-* [ ] Create `quota_policies`.
-* [ ] Create `request_audit_records`.
-* [ ] Create `batch_jobs`.
+* [x] Add migration framework.
+* [x] Create `users`.
+* [x] Create `projects`.
+* [x] Create `api_keys`.
+* [x] Create `quota_policies`.
+* [x] Create `request_audit_records`.
+* [x] Create `batch_jobs`.
 
 ## 6.2 API key auth
 
-* [ ] Use key format `sk_yral_...`.
-* [ ] Store only key hash.
-* [ ] Store prefix for lookup/debug.
-* [ ] Add API key creation script.
-* [ ] Add auth middleware.
-* [ ] Attach auth context to request state.
-* [ ] Reject missing key.
-* [ ] Reject invalid key.
-* [ ] Reject expired/revoked key.
-* [ ] Enforce allowed models.
+* [x] Use key format `an_...`.  // changed from sk_yral_.. -> an_...
+* [x] Store only key hash.
+* [x] Store prefix for lookup/debug.
+* [x] Add API key creation script.
+* [x] Add auth middleware.
+* [x] Attach auth context to request state.
+* [x] Reject missing key.
+* [x] Reject invalid key.
+* [x] Reject expired/revoked key.
+* [x] Enforce allowed models.
 
 Minimal tests:
 
-* [ ] Unit: raw key hashing works.
-* [ ] Unit: invalid key returns `401`.
-* [ ] Unit: disallowed model returns `403`.
-* [ ] Integration: generated key can call `/v1/chat/completions`.
-* [ ] Integration: revoked key cannot call endpoint.
+* [x] Unit: raw key hashing works.
+* [x] Unit: invalid key returns `401`.
+* [x] Unit: disallowed model returns `403`.
+* [x] Integration: generated key can call `/v1/chat/completions`.
+* [x] Integration: revoked key cannot call endpoint.
+
+Implementation notes for future sessions:
+
+```text
+Phase 6 follows this TODO's `an_...` API key prefix, not the older `sk_yral_...`
+text still present in docs/plan.md. The prefix is controlled by API_KEY_PREFIX
+and defaults to `an`.
+
+Production auth is Postgres-backed through SQLAlchemy async sessions and the
+`api_keys.key_hash` column. Local integration tests inject StaticApiKeyAuthService
+so they do not require live Postgres.
+
+Auth middleware renders AppError responses directly because Starlette
+BaseHTTPMiddleware wraps middleware-raised exceptions before FastAPI exception
+handlers can render the existing OpenAI-style error object.
+```
 
 Done when:
 
@@ -423,29 +439,42 @@ No protected inference endpoint works without a valid Postgres-backed API key.
 
 ## 7.1 Redis setup
 
-* [ ] Add local Redis process to startup plan.
-* [ ] Add Redis config/env.
-* [ ] Add health check for Redis.
-* [ ] Add fail-closed behavior when Redis is unavailable.
-* [ ] Add Redis client wrapper.
+* [x] Add local Redis process to startup plan.
+* [x] Add Redis config/env.
+* [x] Add health check for Redis.
+* [x] Add fail-closed behavior when Redis is unavailable.
+* [x] Add Redis client wrapper.
 
 ## 7.2 Rate limits and concurrency
 
-* [ ] Add RPM limit per API key.
-* [ ] Add concurrent request limit per API key.
-* [ ] Add TPM reservation placeholder.
-* [ ] Add overload flag check.
-* [ ] Use atomic Redis operations/Lua where needed.
-* [ ] Ensure counters decrement in `finally`.
+* [x] Add RPM limit per API key.
+* [x] Add concurrent request limit per API key.
+* [x] Add TPM reservation placeholder.
+* [x] Add overload flag check.
+* [x] Use atomic Redis operations/Lua where needed.
+* [x] Ensure counters decrement in `finally`.
 
 Minimal tests:
 
-* [ ] Unit: rate limit key names are correct.
-* [ ] Unit: concurrency counter increments/decrements.
-* [ ] Unit: Redis unavailable maps to controlled `503 dependency_unavailable` or `503 server_overloaded`.
-* [ ] Integration: exceeding RPM returns `429`.
-* [ ] Integration: concurrent request limit returns `429`.
-* [ ] Integration: failed request does not leak concurrency counter.
+* [x] Unit: rate limit key names are correct.
+* [x] Unit: concurrency counter increments/decrements.
+* [x] Unit: Redis unavailable maps to controlled `503 dependency_unavailable` or `503 server_overloaded`.
+* [x] Integration: exceeding RPM returns `429`.
+* [x] Integration: concurrent request limit returns `429`.
+* [x] Integration: failed request does not leak concurrency counter.
+
+Implementation notes for future sessions:
+
+```text
+Redis admission is lazy-created on the first protected inference request unless
+an admission_service is injected by tests. /ready pings Redis only after the
+redis_client exists in app.state, so local health tests do not require Redis.
+
+The Phase 7 implementation uses Redis INCR/DECR/EXPIRE directly. If limits need
+strong multi-key atomicity later, replace the admission sequence with Lua without
+changing the route contract: admission_service.admit(...) returns a lease and the
+route releases it in finally/stream close.
+```
 
 Done when:
 
@@ -459,30 +488,44 @@ Redis protects GPU admission before any request reaches vLLM.
 
 ## 8.1 Token estimation
 
-* [ ] Use tokenizer compatible with the served vLLM model family.
-* [ ] Estimate prompt tokens before admission.
-* [ ] Enforce max input tokens.
-* [ ] Enforce max output tokens.
-* [ ] Enforce max total tokens.
+* [x] Use tokenizer compatible with the served vLLM model family.
+* [x] Estimate prompt tokens before admission.
+* [x] Enforce max input tokens.
+* [x] Enforce max output tokens.
+* [x] Enforce max total tokens.
 
 ## 8.2 Quota reservation/finalization
 
-* [ ] Reserve estimated tokens in Redis before forwarding.
-* [ ] Count completion tokens during/after generation.
-* [ ] Finalize actual usage.
-* [ ] Release unused reservation.
-* [ ] Handle failure.
-* [ ] Handle client disconnect.
-* [ ] Mark partial usage correctly.
+* [x] Reserve estimated tokens in Redis before forwarding.
+* [x] Count completion tokens during/after generation.
+* [x] Finalize actual usage.
+* [x] Release unused reservation.
+* [x] Handle failure.
+* [x] Handle client disconnect.
+* [x] Mark partial usage correctly.
 
 Minimal tests:
 
-* [ ] Unit: prompt token estimator is called before vLLM.
-* [ ] Unit: max token violation returns `400` or `413`.
-* [ ] Unit: quota reservation finalizes correctly on success.
-* [ ] Unit: quota reservation finalizes correctly on failure.
-* [ ] Integration: completed request writes correct usage.
-* [ ] Integration: disconnected streaming request writes `client_disconnected`/partial usage.
+* [x] Unit: prompt token estimator is called before vLLM.
+* [x] Unit: max token violation returns `400` or `413`.
+* [x] Unit: quota reservation finalizes correctly on success.
+* [x] Unit: quota reservation finalizes correctly on failure.
+* [x] Integration: completed request writes correct usage.
+* [x] Integration: disconnected streaming request writes `client_disconnected`/partial usage.
+
+Implementation notes for future sessions:
+
+```text
+The token path uses a TokenEstimator interface and a conservative default
+HeuristicTokenEstimator. Swap app.state.token_estimator for the exact served
+model tokenizer when the final vLLM model is pinned; the route and quota
+reservation contracts already pass through the estimator abstraction.
+
+Redis TPM reservation stores estimated total tokens in rl:api_key:{id}:tpm before
+vLLM and releases unused tokens on success, failure, and stream close. Usage is
+currently recorded in request.state.usage/app.state.usage_records; Phase 9 should
+persist the same UsageRecord into Postgres audit rows.
+```
 
 Done when:
 
@@ -496,18 +539,29 @@ Every request has accounting, including success, failure, timeout, and disconnec
 
 ## 9.1 Audit lifecycle
 
-* [ ] Create audit record when request is accepted.
-* [ ] Update final status on completion/failure/disconnect.
-* [ ] Store request ID, user ID, project ID, API key ID, model, status, token counts, latency, error code.
-* [ ] Do not store full prompts by default.
-* [ ] Store prompt hash if needed.
+* [x] Create audit record when request is accepted.
+* [x] Update final status on completion/failure/disconnect.
+* [x] Store request ID, user ID, project ID, API key ID, model, status, token counts, latency, error code.
+* [x] Do not store full prompts by default.
+* [x] Store prompt hash if needed.
 
 Minimal tests:
 
-* [ ] Unit: audit record builder excludes raw prompt and API key.
-* [ ] Integration: success creates final audit record.
-* [ ] Integration: upstream timeout creates failed audit record.
-* [ ] Integration: client disconnect creates partial audit record.
+* [x] Unit: audit record builder excludes raw prompt and API key.
+* [x] Integration: success creates final audit record.
+* [x] Integration: upstream timeout creates failed audit record.
+* [x] Integration: client disconnect creates partial audit record.
+
+Implementation notes for future sessions:
+
+```text
+Production audit lifecycle uses RequestAuditService with SQLAlchemy async sessions
+and request_audit_records. Tests inject InMemoryRequestAuditService, so local test
+runs do not require live Postgres.
+
+Audit start data stores prompt_hash only. Raw prompts and raw API keys are not
+part of AuditStart or RequestAuditRecord.
+```
 
 Done when:
 
@@ -521,38 +575,54 @@ Postgres has correctness-critical request history independent of ClickHouse.
 
 ## 10.1 ClickHouse schema
 
-* [ ] Create `inference_analytics` database.
-* [ ] Create `usage_events_local`.
-* [ ] Create `usage_events` distributed table.
-* [ ] Create `inference_events_local`.
-* [ ] Create `inference_events` distributed table.
+* [x] Create `inference_analytics` database.
+* [x] Create `usage_events_local`.
+* [x] Create `usage_events` distributed table.
+* [x] Create `inference_events_local`.
+* [x] Create `inference_events` distributed table.
 
 ## 10.2 Event collector
 
-* [ ] Add bounded in-memory queue.
-* [ ] Add event models.
-* [ ] Split critical and non-critical events.
-* [ ] Never block request path on ClickHouse.
-* [ ] Drop non-critical events when queue is full.
-* [ ] Keep critical events recoverable through Postgres/local spool.
+* [x] Add bounded in-memory queue.
+* [x] Add event models.
+* [x] Split critical and non-critical events.
+* [x] Never block request path on ClickHouse.
+* [x] Drop non-critical events when queue full.
+* [x] Keep critical events recoverable through Postgres/local spool.
 
 ## 10.3 Batch flusher
 
-* [ ] Flush every 1–5 seconds.
-* [ ] Flush when batch size threshold is reached.
-* [ ] Use batch inserts.
-* [ ] Add retry with exponential backoff.
-* [ ] Pause gracefully when ClickHouse is down.
-* [ ] Add shutdown drain.
+* [x] Flush every 1–5 seconds.
+* [x] Flush when batch size threshold is reached.
+* [x] Use batch inserts.
+* [x] Add retry with exponential backoff.
+* [x] Pause gracefully when ClickHouse is down.
+* [x] Add shutdown drain.
 
 Minimal tests:
 
-* [ ] Unit: event serialization matches ClickHouse schema.
-* [ ] Unit: non-critical event drops when queue full.
-* [ ] Unit: ClickHouse failure does not raise into request path.
-* [ ] Integration: successful request queues analytics event.
-* [ ] Integration: flusher writes batch to test ClickHouse or fake ClickHouse.
-* [ ] Integration: ClickHouse down does not break inference endpoint.
+* [x] Unit: event serialization matches ClickHouse schema.
+* [x] Unit: non-critical event drops when queue full.
+* [x] Unit: ClickHouse failure does not raise into request path.
+* [x] Integration: successful request queues analytics event.
+* [x] Integration: flusher writes batch to test ClickHouse or fake ClickHouse.
+* [x] Integration: ClickHouse down does not break inference endpoint.
+
+Implementation notes for future sessions:
+
+```text
+Request handling only calls AnalyticsCollector.collect(...) inside a swallow-errors
+helper. ClickHouse inserts happen in ClickHouseFlusher batches outside the request
+path.
+
+backend/scripts/create_clickhouse_tables.py owns the Phase 10 DDL. Set
+CLICKHOUSE_CLUSTER to the real ClickHouse cluster name before running it; the
+current default is `default` only as a local placeholder.
+
+Critical analytics events are spooled to local JSONL when the bounded queue is
+full. Request audit records in Postgres remain the correctness source for
+critical usage recovery.
+```
 
 Done when:
 
