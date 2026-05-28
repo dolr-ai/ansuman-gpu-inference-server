@@ -153,8 +153,8 @@ user is not overprivileged
 * [x] Confirm network/firewall/Tailscale access from current tailnet machine.
 * [ ] Install and join Tailscale on the Vast instance.
 * [x] Store SQLAlchemy asyncpg multi-host DSN with both HAProxy listener IPs in local ignored `.env`.
-* [ ] Add `asyncpg` runtime dependency with the SQLAlchemy DB layer.
-* [ ] Tighten SQLAlchemy lower bound to `>=2.0.18` when DB code lands.
+* [x] Add `asyncpg` runtime dependency with the SQLAlchemy DB layer.
+* [x] Tighten SQLAlchemy lower bound to `>=2.0.18` when DB code lands.
 * [x] Save credentials as environment variables in local ignored `.env`.
 
 Done when:
@@ -202,9 +202,9 @@ Prometheus can scrape private GPU container metrics over Tailscale
 
 ## 1.1 Create Python project
 
-* [ ] Initialize project with `uv`.
-* [ ] Add FastAPI, Uvicorn, Pydantic Settings, httpx, asyncpg/SQLAlchemy, redis, clickhouse-connect, pytest, pytest-asyncio, ruff, mypy, sentry-sdk, prometheus-client.
-* [ ] Create clean app structure:
+* [x] Initialize project with `uv`.
+* [x] Add FastAPI, Uvicorn, Pydantic Settings, httpx, asyncpg/SQLAlchemy, redis, clickhouse-connect, pytest, pytest-asyncio, ruff, mypy, sentry-sdk, prometheus-client.
+* [x] Create clean app structure:
 
 ```text
 app/
@@ -234,15 +234,15 @@ app/
     integration/
 ```
 
-* [ ] Add `.env.example`.
-* [ ] Add `Makefile`.
-* [ ] Add `pyproject.toml`.
+* [x] Add `.env.example`.
+* [x] Add `Makefile`.
+* [x] Add `pyproject.toml`.
 
 Minimal tests:
 
-* [ ] Unit: settings load from env.
-* [ ] Unit: app imports successfully.
-* [ ] Integration: `GET /health` returns 200.
+* [x] Unit: settings load from env.
+* [x] Unit: app imports successfully.
+* [x] Integration: `GET /health` returns 200.
 
 Validation:
 
@@ -265,19 +265,19 @@ Project boots using uv and Makefile only.
 
 ## 2.1 App lifecycle and health
 
-* [ ] Add FastAPI app factory.
-* [ ] Add startup/shutdown hooks.
-* [ ] Add `/health`.
-* [ ] Add `/ready`.
-* [ ] Add structured JSON logging.
-* [ ] Add request ID middleware.
-* [ ] Add global error response format.
+* [x] Add FastAPI app factory.
+* [x] Add startup/shutdown hooks.
+* [x] Add `/health`.
+* [x] Add `/ready`.
+* [x] Add structured JSON logging.
+* [x] Add request ID middleware.
+* [x] Add global error response format.
 
 Minimal tests:
 
-* [ ] Unit: request ID generator returns unique IDs.
-* [ ] Unit: error formatter returns OpenAI-style error object.
-* [ ] Integration: `/health` and `/ready` work.
+* [x] Unit: request ID generator returns unique IDs.
+* [x] Unit: error formatter returns OpenAI-style error object.
+* [x] Integration: `/health` and `/ready` work.
 
 Done when:
 
@@ -293,19 +293,19 @@ Do not connect real vLLM first. Build the contract against a fake local vLLM ser
 
 ## 3.1 vLLM client abstraction
 
-* [ ] Create `VLLMClient`.
-* [ ] Add non-streaming completion method.
-* [ ] Add streaming completion method.
-* [ ] Add timeout handling.
-* [ ] Add upstream error mapping.
-* [ ] Add cancellation support for streaming disconnects.
+* [x] Create `VLLMClient`.
+* [x] Add non-streaming completion method.
+* [x] Add streaming completion method.
+* [x] Add timeout handling.
+* [x] Add upstream error mapping.
+* [x] Add cancellation support for streaming disconnects.
 
 Minimal tests:
 
-* [ ] Unit: request payload is forwarded correctly.
-* [ ] Unit: upstream timeout maps to `504 upstream_timeout`.
-* [ ] Unit: upstream 500 maps to `502 upstream_error`.
-* [ ] Integration: fake vLLM returns a non-streaming response through adapter.
+* [x] Unit: request payload is forwarded correctly.
+* [x] Unit: upstream timeout maps to `504 upstream_timeout`.
+* [x] Unit: upstream 500 maps to `502 upstream_error`.
+* [x] Integration: fake vLLM returns a non-streaming response through adapter.
 
 Done when:
 
@@ -319,27 +319,27 @@ FastAPI can talk to fake vLLM through the same interface real vLLM will use.
 
 ## 4.1 `/v1/models`
 
-* [ ] Return configured model list.
-* [ ] Keep response OpenAI-compatible.
+* [x] Return configured model list.
+* [x] Keep response OpenAI-compatible.
 
 Minimal tests:
 
-* [ ] Unit: model config maps to response shape.
-* [ ] Integration: `GET /v1/models` returns expected model ID.
+* [x] Unit: model config maps to response shape.
+* [x] Integration: `GET /v1/models` returns expected model ID.
 
 ## 4.2 `/v1/chat/completions` non-streaming
 
-* [ ] Accept OpenAI-style chat completion payload.
-* [ ] Validate required fields.
-* [ ] Forward request to vLLM adapter.
-* [ ] Return OpenAI-compatible response.
-* [ ] Add `x-request-id`.
+* [x] Accept OpenAI-style chat completion payload.
+* [x] Validate required fields.
+* [x] Forward request to vLLM adapter.
+* [x] Return OpenAI-compatible response.
+* [x] Add `x-request-id`.
 
 Minimal tests:
 
-* [ ] Unit: invalid payload returns `400 bad_request`.
-* [ ] Unit: valid payload creates normalized internal request.
-* [ ] Integration: fake vLLM response returns through `/v1/chat/completions`.
+* [x] Unit: invalid payload returns `400 bad_request`.
+* [x] Unit: valid payload creates normalized internal request.
+* [x] Integration: fake vLLM response returns through `/v1/chat/completions`.
 
 Done when:
 
@@ -353,22 +353,22 @@ OpenAI client can call non-streaming endpoint against fake vLLM.
 
 ## 5.1 Streaming endpoint
 
-* [ ] Support `stream=true`.
-* [ ] Return `Content-Type: text/event-stream`.
-* [ ] Add `Cache-Control: no-cache, no-transform`.
-* [ ] Forward chunks immediately.
-* [ ] Send final `data: [DONE]`.
-* [ ] Track first-token time.
-* [ ] Add heartbeat support.
-* [ ] Detect client disconnect.
-* [ ] Cancel upstream generation on disconnect.
+* [x] Support `stream=true`.
+* [x] Return `Content-Type: text/event-stream`.
+* [x] Add `Cache-Control: no-cache, no-transform`.
+* [x] Forward chunks immediately.
+* [x] Send final `data: [DONE]`.
+* [x] Track first-token time.
+* [x] Add heartbeat support.
+* [x] Detect client disconnect.
+* [x] Cancel upstream generation on disconnect.
 
 Minimal tests:
 
-* [ ] Unit: SSE chunk formatter is correct.
-* [ ] Unit: heartbeat event is valid.
-* [ ] Integration: fake streaming vLLM returns chunks through FastAPI.
-* [ ] Integration: disconnect cleanup path runs without leaking request state.
+* [x] Unit: SSE chunk formatter is correct.
+* [x] Unit: heartbeat event is valid.
+* [x] Integration: fake streaming vLLM returns chunks through FastAPI.
+* [x] Integration: disconnect cleanup path runs without leaking request state.
 
 Done when:
 
@@ -382,34 +382,50 @@ Streaming works through FastAPI with correct SSE headers.
 
 ## 6.1 Migrations
 
-* [ ] Add migration framework.
-* [ ] Create `users`.
-* [ ] Create `projects`.
-* [ ] Create `api_keys`.
-* [ ] Create `quota_policies`.
-* [ ] Create `request_audit_records`.
-* [ ] Create `batch_jobs`.
+* [x] Add migration framework.
+* [x] Create `users`.
+* [x] Create `projects`.
+* [x] Create `api_keys`.
+* [x] Create `quota_policies`.
+* [x] Create `request_audit_records`.
+* [x] Create `batch_jobs`.
 
 ## 6.2 API key auth
 
-* [ ] Use key format `sk_yral_...`.
-* [ ] Store only key hash.
-* [ ] Store prefix for lookup/debug.
-* [ ] Add API key creation script.
-* [ ] Add auth middleware.
-* [ ] Attach auth context to request state.
-* [ ] Reject missing key.
-* [ ] Reject invalid key.
-* [ ] Reject expired/revoked key.
-* [ ] Enforce allowed models.
+* [x] Use key format `an_...`.  // changed from sk_yral_.. -> an_...
+* [x] Store only key hash.
+* [x] Store prefix for lookup/debug.
+* [x] Add API key creation script.
+* [x] Add auth middleware.
+* [x] Attach auth context to request state.
+* [x] Reject missing key.
+* [x] Reject invalid key.
+* [x] Reject expired/revoked key.
+* [x] Enforce allowed models.
 
 Minimal tests:
 
-* [ ] Unit: raw key hashing works.
-* [ ] Unit: invalid key returns `401`.
-* [ ] Unit: disallowed model returns `403`.
-* [ ] Integration: generated key can call `/v1/chat/completions`.
-* [ ] Integration: revoked key cannot call endpoint.
+* [x] Unit: raw key hashing works.
+* [x] Unit: invalid key returns `401`.
+* [x] Unit: disallowed model returns `403`.
+* [x] Integration: generated key can call `/v1/chat/completions`.
+* [x] Integration: revoked key cannot call endpoint.
+
+Implementation notes for future sessions:
+
+```text
+Phase 6 follows this TODO's `an_...` API key prefix, not the older `sk_yral_...`
+text still present in docs/plan.md. The prefix is controlled by API_KEY_PREFIX
+and defaults to `an`.
+
+Production auth is Postgres-backed through SQLAlchemy async sessions and the
+`api_keys.key_hash` column. Local integration tests inject StaticApiKeyAuthService
+so they do not require live Postgres.
+
+Auth middleware renders AppError responses directly because Starlette
+BaseHTTPMiddleware wraps middleware-raised exceptions before FastAPI exception
+handlers can render the existing OpenAI-style error object.
+```
 
 Done when:
 

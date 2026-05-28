@@ -58,6 +58,9 @@ run-worker: env venv
 run-flusher: env venv
 	$(UV_RUN) python -m backend.workers.analytics_flusher
 
+run-redis: env venv
+	$(UV_RUN) python -m backend.scripts.run_redis
+
 smoke: env venv
 	$(UV_RUN) python -m backend.scripts.smoke_test
 

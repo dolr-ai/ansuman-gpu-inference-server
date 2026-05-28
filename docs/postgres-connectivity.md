@@ -76,6 +76,12 @@ The local ignored `.env` has the real `gpu_inference` DSN.
 
 All asyncpg multi-host entries must include an explicit port.
 
+Application code now includes the SQLAlchemy async DB layer, `asyncpg` runtime
+dependency, and initial Alembic schema migration `20260529_0001_phase6_schema.py`.
+Run `make migrate` only against the intended database. API keys use the `an_...`
+format from `docs/todo.md`, store only SHA-256 hashes, and keep a short prefix
+for debugging.
+
 Official reference:
 `https://docs.sqlalchemy.org/en/20/dialects/postgresql.html#asyncpg`
 
@@ -98,7 +104,5 @@ Before enabling this in production:
 
 ```text
 Install and join Tailscale on the Vast instance.
-Add the `asyncpg` runtime dependency with the SQLAlchemy DB layer.
-Tighten the SQLAlchemy lower bound to >=2.0.18 when the DB layer is implemented.
 Run an app-level read/write migration test from the actual Vast instance.
 ```
