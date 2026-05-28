@@ -66,15 +66,21 @@ class BatchJobRecord:
 
 
 class BatchJobStore(Protocol):
-    async def create(self, *, auth_context: AuthContext, payload: dict[str, Any], model: str) -> BatchJobRecord: ...
+    async def create(
+        self, *, auth_context: AuthContext, payload: dict[str, Any], model: str
+    ) -> BatchJobRecord: ...
 
     async def get(self, job_id: str) -> BatchJobRecord | None: ...
 
     async def transition(self, job_id: str, target_status: str) -> BatchJobRecord | None: ...
 
-    async def mark_succeeded(self, job_id: str, *, result: dict[str, Any], usage: dict[str, int]) -> BatchJobRecord | None: ...
+    async def mark_succeeded(
+        self, job_id: str, *, result: dict[str, Any], usage: dict[str, int]
+    ) -> BatchJobRecord | None: ...
 
-    async def mark_failed(self, job_id: str, *, error_code: str, error_message: str) -> BatchJobRecord | None: ...
+    async def mark_failed(
+        self, job_id: str, *, error_code: str, error_message: str
+    ) -> BatchJobRecord | None: ...
 
     async def list_recoverable(self, *, limit: int = 100) -> list[BatchJobRecord]: ...
 
@@ -138,7 +144,9 @@ class InMemoryBatchJobStore:
     def __init__(self) -> None:
         self.jobs: dict[str, BatchJobRecord] = {}
 
-    async def create(self, *, auth_context: AuthContext, payload: dict[str, Any], model: str) -> BatchJobRecord:
+    async def create(
+        self, *, auth_context: AuthContext, payload: dict[str, Any], model: str
+    ) -> BatchJobRecord:
         job = BatchJobRecord(
             id=f"job_{uuid4().hex}",
             user_id=auth_context.user_id,
@@ -161,7 +169,9 @@ class InMemoryBatchJobStore:
         job.status = target_status
         return job
 
-    async def mark_succeeded(self, job_id: str, *, result: dict[str, Any], usage: dict[str, int]) -> BatchJobRecord | None:
+    async def mark_succeeded(
+        self, job_id: str, *, result: dict[str, Any], usage: dict[str, int]
+    ) -> BatchJobRecord | None:
         job = self.jobs.get(job_id)
         if job is None or job.status == CANCELLED:
             return None
@@ -172,7 +182,9 @@ class InMemoryBatchJobStore:
         job.metadata["usage"] = usage
         return job
 
-    async def mark_failed(self, job_id: str, *, error_code: str, error_message: str) -> BatchJobRecord | None:
+    async def mark_failed(
+        self, job_id: str, *, error_code: str, error_message: str
+    ) -> BatchJobRecord | None:
         job = self.jobs.get(job_id)
         if job is None or job.status == CANCELLED:
             return None
@@ -190,7 +202,9 @@ class PostgresBatchJobStore:
     def __init__(self, sessionmaker: async_sessionmaker[AsyncSession]) -> None:
         self._sessionmaker = sessionmaker
 
-    async def create(self, *, auth_context: AuthContext, payload: dict[str, Any], model: str) -> BatchJobRecord:
+    async def create(
+        self, *, auth_context: AuthContext, payload: dict[str, Any], model: str
+    ) -> BatchJobRecord:
         async for session in session_scope(self._sessionmaker):
             repository = BatchJobRepository(session)
             model_obj = await repository.create(
@@ -219,7 +233,9 @@ class PostgresBatchJobStore:
             return _record_from_model(model_obj)
         return None
 
-    async def mark_succeeded(self, job_id: str, *, result: dict[str, Any], usage: dict[str, int]) -> BatchJobRecord | None:
+    async def mark_succeeded(
+        self, job_id: str, *, result: dict[str, Any], usage: dict[str, int]
+    ) -> BatchJobRecord | None:
         async for session in session_scope(self._sessionmaker):
             repository = BatchJobRepository(session)
             model_obj = await repository.get(job_id)
@@ -229,13 +245,17 @@ class PostgresBatchJobStore:
             return _record_from_model(model_obj)
         return None
 
-    async def mark_failed(self, job_id: str, *, error_code: str, error_message: str) -> BatchJobRecord | None:
+    async def mark_failed(
+        self, job_id: str, *, error_code: str, error_message: str
+    ) -> BatchJobRecord | None:
         async for session in session_scope(self._sessionmaker):
             repository = BatchJobRepository(session)
             model_obj = await repository.get(job_id)
             if model_obj is None or model_obj.status == CANCELLED:
                 return None
-            model_obj = await repository.mark_failed(model_obj, error_code=error_code, error_message=error_message)
+            model_obj = await repository.mark_failed(
+                model_obj, error_code=error_code, error_message=error_message
+            )
             return _record_from_model(model_obj)
         return None
 
@@ -248,6 +268,10 @@ class PostgresBatchJobStore:
 
 def _record_from_model(model_obj: BatchJob) -> BatchJobRecord:
     metadata = dict(model_obj.metadata_json or {})
+    raw_input_payload = metadata.get("input_payload")
+    input_payload = raw_input_payload if isinstance(raw_input_payload, dict) else {}
+    raw_result_payload = metadata.get("result_payload")
+    result_payload = raw_result_payload if isinstance(raw_result_payload, dict) else None
     return BatchJobRecord(
         id=model_obj.id,
         user_id=model_obj.user_id,
@@ -255,8 +279,8 @@ def _record_from_model(model_obj: BatchJob) -> BatchJobRecord:
         api_key_id=model_obj.api_key_id,
         model=model_obj.model,
         status=model_obj.status,
-        input_payload=dict(metadata.get("input_payload") or {}),
-        result_payload=metadata.get("result_payload") if isinstance(metadata.get("result_payload"), dict) else None,
+        input_payload=input_payload,
+        result_payload=result_payload,
         error_code=model_obj.error_code,
         error_message=model_obj.error_message,
         request_count=model_obj.request_count,

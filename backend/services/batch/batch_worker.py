@@ -129,9 +129,7 @@ class BatchWorker:
             await self.store.mark_succeeded(
                 job_id,
                 result=response,
-                usage=usage_dict(
-                    usage.prompt_tokens, usage.completion_tokens, usage.total_tokens
-                ),
+                usage=usage_dict(usage.prompt_tokens, usage.completion_tokens, usage.total_tokens),
             )
             self._emit_usage_event(
                 auth_context=auth_context,
@@ -154,7 +152,9 @@ class BatchWorker:
             error_code = getattr(exc, "code", "batch_job_failed")
             if admission_lease is not None:
                 await admission_lease.finalize_tokens(actual_tokens=0, release_all=True)
-            failed_usage = UsageRecord(prompt_tokens=0, completion_tokens=0, total_tokens=0, status="failed")
+            failed_usage = UsageRecord(
+                prompt_tokens=0, completion_tokens=0, total_tokens=0, status="failed"
+            )
             if audit_record_id is not None:
                 await self.audit_service.finalize(
                     build_audit_final(

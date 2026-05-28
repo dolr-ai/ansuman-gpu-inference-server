@@ -41,7 +41,10 @@ class BatchJobRepository:
 
     async def list_by_status(self, status: str, *, limit: int = 100) -> list[BatchJob]:
         result = await self._session.execute(
-            select(BatchJob).where(BatchJob.status == status).order_by(BatchJob.created_at).limit(limit)
+            select(BatchJob)
+            .where(BatchJob.status == status)
+            .order_by(BatchJob.created_at)
+            .limit(limit)
         )
         return list(result.scalars().all())
 

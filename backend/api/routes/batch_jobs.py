@@ -1,14 +1,16 @@
 """Batch job routes."""
 
-from typing import Any
-
 from fastapi import APIRouter, Request
 
 from backend.core.config import Settings
 from backend.core.errors import AppError
 from backend.db.postgres import create_postgres_engine, create_sessionmaker
 from backend.db.redis import RedisClient
-from backend.schemas.batch_job import BatchJobCreateRequest, BatchJobResponse, BatchJobSubmitResponse
+from backend.schemas.batch_job import (
+    BatchJobCreateRequest,
+    BatchJobResponse,
+    BatchJobSubmitResponse,
+)
 from backend.services.auth.api_key_service import AuthContext, ensure_model_allowed
 from backend.services.batch.batch_queue import RedisBatchQueue
 from backend.services.batch.batch_service import BatchJobService, PostgresBatchJobStore
@@ -17,7 +19,9 @@ router = APIRouter(prefix="/v1/batch/jobs", tags=["batch_jobs"])
 
 
 @router.post("", response_model=BatchJobSubmitResponse)
-async def submit_batch_job(request_body: BatchJobCreateRequest, request: Request) -> BatchJobSubmitResponse:
+async def submit_batch_job(
+    request_body: BatchJobCreateRequest, request: Request
+) -> BatchJobSubmitResponse:
     auth_context = _auth_context(request)
     ensure_model_allowed(auth_context, request_body.model)
     service = _get_or_create_batch_service(request)
