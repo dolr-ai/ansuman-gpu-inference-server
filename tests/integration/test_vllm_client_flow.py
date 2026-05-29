@@ -51,3 +51,26 @@ def test_fake_vllm_returns_non_streaming_response_through_adapter() -> None:
     assert response["id"] == "chatcmpl_fake"
     assert response["model"] == "test-model"
     assert response["choices"][0]["message"]["content"] == "hello from fake vllm"
+
+
+def test_fake_vllm_models_endpoint_responds_through_adapter() -> None:
+    fake_vllm = FastAPI()
+
+    @fake_vllm.get("/v1/models")
+    async def models() -> dict[str, Any]:
+        return {"object": "list", "data": [{"id": "test-model", "object": "model"}]}
+
+    async def scenario() -> dict[str, Any]:
+        client = VLLMClient(
+            "http://fake-vllm.test",
+            transport=httpx.ASGITransport(app=fake_vllm),
+        )
+        try:
+            return await client.list_models()
+        finally:
+            await client.close()
+
+    response = run(scenario())
+
+    assert response["object"] == "list"
+    assert response["data"][0]["id"] == "test-model"

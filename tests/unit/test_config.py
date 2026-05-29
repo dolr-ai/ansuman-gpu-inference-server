@@ -19,3 +19,23 @@ def test_settings_parses_model_ids() -> None:
     settings = Settings(model_ids_raw="model-a, model-b,,")
 
     assert settings.model_ids == ("model-a", "model-b")
+
+
+def test_settings_parse_vllm_runtime_knobs(monkeypatch) -> None:
+    monkeypatch.setenv("VLLM_MODEL_PATH", "/models/qwen")
+    monkeypatch.setenv("MODEL_IDS", "served-model")
+    monkeypatch.setenv("VLLM_TENSOR_PARALLEL_SIZE", "4")
+    monkeypatch.setenv("VLLM_MAX_MODEL_LEN", "4096")
+    monkeypatch.setenv("VLLM_GPU_MEMORY_UTILIZATION", "0.85")
+    monkeypatch.setenv("VLLM_MAX_NUM_SEQS", "32")
+    monkeypatch.setenv("VLLM_MAX_NUM_BATCHED_TOKENS", "8192")
+
+    settings = Settings()
+
+    assert settings.vllm_model_path == "/models/qwen"
+    assert settings.vllm_served_model == "served-model"
+    assert settings.vllm_tensor_parallel_size == 4
+    assert settings.vllm_max_model_len == 4096
+    assert settings.vllm_gpu_memory_utilization == 0.85
+    assert settings.vllm_max_num_seqs == 32
+    assert settings.vllm_max_num_batched_tokens == 8192

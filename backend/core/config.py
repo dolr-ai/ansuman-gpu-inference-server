@@ -31,7 +31,17 @@ class Settings(BaseSettings):
     clickhouse_cluster: str = Field(default="default", alias="CLICKHOUSE_CLUSTER")
     analytics_queue_size: int = Field(default=1000, alias="ANALYTICS_QUEUE_SIZE")
     analytics_flush_batch_size: int = Field(default=500, alias="ANALYTICS_FLUSH_BATCH_SIZE")
-    vllm_base_url: str = Field(default="http://localhost:8001", alias="VLLM_BASE_URL")
+    vllm_base_url: str = Field(default="http://127.0.0.1:8001", alias="VLLM_BASE_URL")
+    vllm_host: str = Field(default="127.0.0.1", alias="VLLM_HOST")
+    vllm_port: int = Field(default=8001, alias="VLLM_PORT")
+    vllm_model_path: str = Field(default="Qwen/Qwen3-8B-FP8", alias="VLLM_MODEL_PATH")
+    vllm_served_model_name: str | None = Field(default=None, alias="VLLM_SERVED_MODEL_NAME")
+    vllm_tensor_parallel_size: int = Field(default=4, alias="VLLM_TENSOR_PARALLEL_SIZE")
+    vllm_max_model_len: int = Field(default=8192, alias="VLLM_MAX_MODEL_LEN")
+    vllm_gpu_memory_utilization: float = Field(default=0.9, alias="VLLM_GPU_MEMORY_UTILIZATION")
+    vllm_max_num_seqs: int = Field(default=64, alias="VLLM_MAX_NUM_SEQS")
+    vllm_max_num_batched_tokens: int = Field(default=8192, alias="VLLM_MAX_NUM_BATCHED_TOKENS")
+    vllm_startup_timeout_seconds: float = Field(default=900.0, alias="VLLM_STARTUP_TIMEOUT_SECONDS")
     model_ids_raw: str = Field(default="test-model", alias="MODEL_IDS")
     api_key_prefix: str = Field(default="an", alias="API_KEY_PREFIX")
     sentry_dsn: str | None = Field(default=None, alias="SENTRY_DSN")
@@ -53,6 +63,15 @@ class Settings(BaseSettings):
         return tuple(
             model_id.strip() for model_id in self.model_ids_raw.split(",") if model_id.strip()
         )
+
+    @property
+    def vllm_served_model(self) -> str:
+        """Model name exposed by vLLM's OpenAI-compatible API."""
+        if self.vllm_served_model_name:
+            return self.vllm_served_model_name
+        if self.model_ids:
+            return self.model_ids[0]
+        return self.vllm_model_path
 
 
 @lru_cache

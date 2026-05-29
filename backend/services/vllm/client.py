@@ -35,6 +35,28 @@ class VLLMClient:
         """Close the underlying HTTP client."""
         await self._client.aclose()
 
+    async def list_models(self) -> JsonObject:
+        """Return the upstream vLLM OpenAI-compatible model list."""
+        try:
+            response = await self._client.get("/v1/models")
+        except httpx.TimeoutException as exc:
+            raise timeout_error(exc) from exc
+        except httpx.HTTPError as exc:
+            raise AppError(
+                message="vLLM upstream request failed",
+                code="upstream_error",
+                status_code=502,
+                type="server_error",
+            ) from exc
+        self._raise_for_upstream_status(response.status_code)
+        try:
+            parsed = response.json()
+        except ValueError as exc:
+            raise invalid_response_error() from exc
+        if not isinstance(parsed, dict):
+            raise invalid_response_error()
+        return parsed
+
     async def create_chat_completion(self, payload: Mapping[str, Any]) -> JsonObject:
         """Create a non-streaming chat completion through vLLM."""
         response = await self._post_chat_completion(payload)
